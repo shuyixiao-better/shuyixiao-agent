@@ -75,7 +75,7 @@ class GiteeAIClient:
         Returns:
             API 响应字典
         """
-        url = f"{self.base_url}/{self.model}/chat/completions"
+        url = f"{self.base_url}/chat/completions"
         
         payload = {
             "model": self.model,
