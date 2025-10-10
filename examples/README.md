@@ -67,6 +67,40 @@ python examples/04_api_client.py
 
 ---
 
+### 05_all_tools_demo.py - 完整工具集演示
+演示所有13个内置工具的使用方法。
+
+**运行方式：**
+```bash
+python examples/05_all_tools_demo.py
+```
+
+**学习要点：**
+- 如何批量注册多个工具
+- 时间和日期工具的使用（当前时间、日期信息、年龄计算）
+- 数学工具的使用（计算器、随机数、质数检查）
+- 字符串工具的使用（反转、统计）
+- 编码工具的使用（Base64编码/解码）
+- 转换工具的使用（温度转换）
+- UUID生成工具的使用
+
+**包含的工具：**
+1. `get_current_time` - 获取当前时间
+2. `calculate` - 数学计算
+3. `search_wikipedia` - 维基百科搜索
+4. `get_random_number` - 生成随机数
+5. `convert_temperature` - 温度转换
+6. `string_reverse` - 字符串反转
+7. `count_words` - 文本统计
+8. `get_date_info` - 日期信息
+9. `calculate_age` - 年龄计算
+10. `generate_uuid` - UUID生成
+11. `encode_base64` - Base64编码
+12. `decode_base64` - Base64解码
+13. `check_prime` - 质数检查
+
+---
+
 ## 准备工作
 
 在运行示例之前，请确保：
