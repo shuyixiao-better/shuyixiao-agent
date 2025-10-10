@@ -101,6 +101,50 @@ python examples/05_all_tools_demo.py
 
 ---
 
+### 06_ai_powered_tools_demo.py - AI驱动工具演示 🚀 **推荐**
+
+**这是最重要的示例！** 演示真正需要大模型参与的智能工具，而不是简单的硬编码逻辑。
+
+**运行方式：**
+```bash
+python examples/06_ai_powered_tools_demo.py
+```
+
+**学习要点：**
+- 什么是真正的AI工具
+- AI工具与普通工具的区别
+- 如何使用AI进行代码审查
+- 如何使用AI生成创意
+- 如何使用AI优化内容
+- 如何使用AI辅助决策
+
+**包含的AI工具：**
+1. `web_content_analyzer` - 智能网页内容分析（理解、提取、摘要）
+2. `text_quality_analyzer` - 文本质量分析（评估、发现问题、改进建议）
+3. `creative_idea_generator` - 创意生成（发散思维、创新、可行性）
+4. `code_review_assistant` - 代码审查（理解逻辑、发现问题、优化）
+5. `decision_analyzer` - 决策分析（多维度分析、权衡、建议）
+6. `data_insight_generator` - 数据洞察（理解数据、发现规律）
+7. `content_improver` - 内容优化（理解意图、改进表达）
+8. `problem_solver` - 问题解决（分解问题、系统性方案）
+9. `meeting_summarizer` - 会议总结（提取要点、结构化）
+10. `learning_path_designer` - 学习路径设计（知识体系、规划）
+
+**为什么这些工具重要？**
+- ✅ 需要深度理解和分析能力
+- ✅ 需要创造性和推理能力
+- ✅ 需要专业知识和经验
+- ✅ 传统编程难以实现
+- ✅ 真正体现AI的价值
+
+**对比旧工具：**
+- ❌ 旧工具：获取时间、计算、字符串反转 - Java也能做
+- ✅ 新工具：代码审查、创意生成、决策分析 - 需要AI智能
+
+📖 **详细了解：** [AI工具设计哲学](../docs/ai_tools_philosophy.md)
+
+---
+
 ## 准备工作
 
 在运行示例之前，请确保：
