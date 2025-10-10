@@ -101,7 +101,7 @@ class SimpleAgent:
         
         # 调用模型
         response = self.client.chat_completion(messages=messages)
-        ai_message = response["choices"][0]["message"]["content"]
+        ai_message = response["choices"][0]["message"].get("content") or ""
         
         # 返回更新后的状态
         return {

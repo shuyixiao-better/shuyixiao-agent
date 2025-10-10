@@ -156,7 +156,7 @@ class ToolAgent:
         if "tool_calls" in ai_msg and ai_msg["tool_calls"]:
             return {
                 "messages": [AIMessage(
-                    content=ai_msg.get("content", ""),
+                    content=ai_msg.get("content") or "",
                     additional_kwargs={"tool_calls": ai_msg["tool_calls"]}
                 )],
                 "next_action": "tool",
@@ -164,7 +164,7 @@ class ToolAgent:
             }
         else:
             return {
-                "messages": [AIMessage(content=ai_msg["content"])],
+                "messages": [AIMessage(content=ai_msg.get("content") or "")],
                 "next_action": "end",
                 "iterations": state.get("iterations", 0) + 1
             }

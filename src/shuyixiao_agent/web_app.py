@@ -11,12 +11,15 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
+import json
 from pathlib import Path
+from langchain_core.messages import HumanMessage
 
 from .agents.simple_agent import SimpleAgent
 from .agents.tool_agent import ToolAgent
 from .tools.basic_tools import get_basic_tools
 from .config import settings
+from .gitee_ai_client import GiteeAIClient
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -111,7 +114,7 @@ async def read_root():
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    """处理聊天请求"""
+    """处理聊天请求（非流式）"""
     try:
         # 获取 Agent
         agent = get_agent(request.agent_type, request.system_message)
@@ -145,6 +148,86 @@ async def chat(request: ChatRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"处理请求时出错: {str(e)}")
+
+
+@app.post("/api/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """处理聊天请求（流式）"""
+    
+    async def generate():
+        try:
+            # 初始化会话历史
+            if request.session_id not in session_histories:
+                session_histories[request.session_id] = []
+            
+            # 添加用户消息到历史
+            session_histories[request.session_id].append({
+                "role": "user",
+                "content": request.message
+            })
+            
+            # 构建消息历史
+            messages = []
+            
+            # 添加系统消息
+            system_message = request.system_message or "你是一个有帮助的AI助手，请友好、专业地回答用户的问题。"
+            messages.append({
+                "role": "system",
+                "content": system_message
+            })
+            
+            # 添加历史消息（最近10条）
+            recent_history = session_histories[request.session_id][-10:]
+            messages.extend(recent_history)
+            
+            # 创建客户端并调用流式API
+            client = GiteeAIClient()
+            full_response = ""
+            
+            # 对于工具调用模式，暂时使用非流式（因为需要处理工具调用）
+            if request.agent_type == "tool":
+                agent = get_agent(request.agent_type, request.system_message)
+                response = agent.run(request.message)
+                full_response = response
+                
+                # 一次性发送
+                yield f"data: {json.dumps({'content': response, 'done': True}, ensure_ascii=False)}\n\n"
+            else:
+                # 简单对话模式使用流式
+                stream = client.chat_completion(messages=messages, stream=True)
+                
+                for chunk in stream:
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0].get("delta", {})
+                        content = delta.get("content", "")
+                        
+                        if content:
+                            full_response += content
+                            # 发送数据块
+                            yield f"data: {json.dumps({'content': content, 'done': False}, ensure_ascii=False)}\n\n"
+                
+                # 发送完成信号
+                yield f"data: {json.dumps({'content': '', 'done': True}, ensure_ascii=False)}\n\n"
+            
+            # 添加完整回复到历史
+            session_histories[request.session_id].append({
+                "role": "assistant",
+                "content": full_response
+            })
+            
+        except Exception as e:
+            error_msg = f"处理请求时出错: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg, 'done': True}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @app.get("/api/history/{session_id}", response_model=SessionHistoryResponse)
