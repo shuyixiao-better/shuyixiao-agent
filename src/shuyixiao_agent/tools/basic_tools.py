@@ -98,3 +98,53 @@ TOOL_DEFINITIONS = {
     }
 }
 
+
+def get_basic_tools():
+    """
+    获取基础工具列表，用于注册到 Agent
+    
+    Returns:
+        工具信息列表
+    """
+    return [
+        {
+            "name": "get_current_time",
+            "func": get_current_time,
+            "description": "获取当前的日期和时间",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        },
+        {
+            "name": "calculate",
+            "func": calculate,
+            "description": "计算数学表达式。支持加减乘除和括号。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "expression": {
+                        "type": "string",
+                        "description": "要计算的数学表达式，例如 '2 + 3 * 4'"
+                    }
+                },
+                "required": ["expression"]
+            }
+        },
+        {
+            "name": "search_wikipedia",
+            "func": search_wikipedia,
+            "description": "搜索维基百科获取信息",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "搜索关键词"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    ]
