@@ -198,12 +198,96 @@
             border-bottom-right-radius: 5px;
         }
 
+        .message.assistant {
+            position: relative;
+        }
+
         .message.assistant .message-content {
             background: white;
             color: #333;
             border: 1px solid #dee2e6;
             border-bottom-left-radius: 5px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            padding-bottom: 45px;
+        }
+
+        /* 复制按钮容器 */
+        .copy-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+            z-index: 10;
+            pointer-events: all;
+        }
+
+        .copy-controls:hover {
+            opacity: 1;
+        }
+
+        /* 格式选择器 */
+        .copy-format-selector {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-format-selector:hover {
+            border-color: #667eea;
+            background: #f8f9fa;
+        }
+
+        .copy-format-selector:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* 复制按钮 */
+        .copy-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .copy-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .copy-btn:active {
+            transform: translateY(0);
+        }
+
+        .copy-btn.copied {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .copy-btn svg {
+            width: 14px;
+            height: 14px;
         }
 
         /* Markdown 样式 */
@@ -560,12 +644,14 @@
             // 如果提供了messageId，尝试查找现有消息
             let messageDiv = messageId ? document.getElementById(messageId) : null;
             let contentDiv;
+            let isNewMessage = false;
             
             if (messageDiv) {
                 // 更新现有消息
                 contentDiv = messageDiv.querySelector('.message-content');
             } else {
                 // 创建新消息
+                isNewMessage = true;
                 messageDiv = document.createElement('div');
                 messageDiv.className = `message ${role}`;
                 if (messageId) {
@@ -584,8 +670,26 @@
                 // 直接设置HTML（用于打字指示器等）
                 contentDiv.innerHTML = content;
             } else if (role === 'assistant') {
+                // 保存原始Markdown内容到data属性
+                messageDiv.setAttribute('data-markdown', content);
+                console.log('保存Markdown到data-markdown属性，长度:', content.length);
                 // AI 回复使用 Markdown 渲染
                 contentDiv.innerHTML = renderMarkdown(content);
+                
+                // 添加复制控件（只在新消息创建时添加一次，放在 messageDiv 而不是 contentDiv）
+                let copyControls = messageDiv.querySelector('.copy-controls');
+                if (!copyControls) {
+                    const actualId = messageDiv.id || `msg-${Date.now()}`;
+                    if (!messageDiv.id) {
+                        messageDiv.id = actualId;
+                    }
+                    console.log('创建新的复制控件，ID:', actualId);
+                    copyControls = createCopyControls(actualId);
+                    messageDiv.appendChild(copyControls);
+                    console.log('复制控件已添加到messageDiv');
+                } else {
+                    console.log('复制控件已存在，跳过创建');
+                }
             } else {
                 // 用户消息保持纯文本
                 contentDiv.textContent = content;
@@ -595,6 +699,109 @@
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
             return messageDiv.id || `msg-${Date.now()}`;
+        }
+
+        // 创建复制控件
+        function createCopyControls(messageId) {
+            console.log('创建复制控件，messageId:', messageId);
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'copy-controls';
+            
+            // 格式选择器
+            const formatSelector = document.createElement('select');
+            formatSelector.className = 'copy-format-selector';
+            formatSelector.innerHTML = `
+                <option value="markdown" selected>Markdown</option>
+                <option value="text">纯文本</option>
+            `;
+            
+            // 复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn';
+            copyBtn.type = 'button';
+            copyBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>复制</span>
+            `;
+            
+            copyBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('复制按钮被点击，messageId:', messageId, 'format:', formatSelector.value);
+                copyMessage(messageId, formatSelector.value, copyBtn);
+            };
+            
+            controlsDiv.appendChild(formatSelector);
+            controlsDiv.appendChild(copyBtn);
+            
+            return controlsDiv;
+        }
+
+        // 复制消息内容
+        async function copyMessage(messageId, format, btnElement) {
+            console.log('复制消息函数被调用，messageId:', messageId, 'format:', format);
+            const messageDiv = document.getElementById(messageId);
+            if (!messageDiv) {
+                console.error('找不到消息元素:', messageId);
+                return;
+            }
+            
+            const contentDiv = messageDiv.querySelector('.message-content');
+            let textToCopy = '';
+            
+            if (format === 'markdown') {
+                // 复制原始Markdown（从messageDiv获取）
+                textToCopy = messageDiv.getAttribute('data-markdown') || '';
+                console.log('Markdown内容:', textToCopy.substring(0, 100) + '...');
+            } else {
+                // 复制纯文本（去除HTML标签）
+                textToCopy = contentDiv ? contentDiv.textContent || '' : '';
+                console.log('纯文本内容:', textToCopy.substring(0, 100) + '...');
+            }
+            
+            if (!textToCopy) {
+                console.warn('没有内容可复制');
+            }
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                console.log('复制成功！');
+                
+                // 显示成功反馈
+                const originalHTML = btnElement.innerHTML;
+                btnElement.classList.add('copied');
+                btnElement.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>已复制</span>
+                `;
+                
+                // 2秒后恢复
+                setTimeout(() => {
+                    btnElement.classList.remove('copied');
+                    btnElement.innerHTML = originalHTML;
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+                // 显示错误反馈
+                const originalHTML = btnElement.innerHTML;
+                btnElement.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>失败</span>
+                `;
+                
+                setTimeout(() => {
+                    btnElement.innerHTML = originalHTML;
+                }, 2000);
+            }
         }
 
         // 显示错误消息
