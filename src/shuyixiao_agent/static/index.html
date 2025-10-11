@@ -3,7 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShuYixiao Agent - 智能对话助手</title>
+    <meta name="description" content="ShuYixiao Agent - 基于 Gitee AI 的智能对话助手，支持工具调用和流式对话">
+    <meta name="keywords" content="AI助手,智能对话,Gitee AI,LangGraph,工具调用">
+    <meta name="author" content="ShuYixiao Team">
+    
+    <!-- 主题色 -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    
+    <!-- Open Graph 元数据 -->
+    <meta property="og:title" content="ShuYixiao Agent - 智能对话助手">
+    <meta property="og:description" content="强大的 AI 对话助手，支持多种工具调用">
+    <meta property="og:type" content="website">
+    
+    <title>🤖 ShuYixiao Agent - 智能对话助手</title>
+    
+    <!-- Favicon - 使用 SVG 图标 -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23grad)'/><circle cx='35' cy='40' r='8' fill='white'/><circle cx='65' cy='40' r='8' fill='white'/><path d='M 30 65 Q 50 75 70 65' stroke='white' stroke-width='6' fill='none' stroke-linecap='round'/><rect x='25' y='20' width='15' height='8' rx='4' fill='white' opacity='0.3'/><rect x='60' y='20' width='15' height='8' rx='4' fill='white' opacity='0.3'/></svg>">
+    
+    <!-- 备用 Favicon（PNG 格式，emoji） -->
+    <link rel="alternate icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAABKlJREFUWIXFl2tsVFUUhb9z75QOlBbaUtqhQCmPAqVQHhYQBBEURRBRJEYTE6MxJv4w/jAmxh/+MyYmGhMTE40/jD+MiYnGRBONBkWUhwVEpDylPAqlQKG0tLQz7b1z/DGdztw7c2dK0ZV0kpOz99prn7P3PmcfuEEopdKBmcBMYDowFcgB0oCLwJ/AMeAwcACoVUqZN2JbxSpQSk0B1gGrgHuBjBiG+oEK4HNgh1KqVzf2ugKl1P3ARmA5kKpjqBd4BPgK2KSUOjauAqXUXOA94IExjRwZvwPPKKUOjKlAKTUf+AyYe80WoyMANgNvKKUuXVWglFoMbAOyY3LiBqAH2AC8r5TquzKglJoNfB2TlQng98BaoMEuAFIG5qV/A7fG+Ozx4CngOwClVKqd+QcgSaewAygAngbOW5nrgB8BAwivf/4E1gNfAGmAATx8ve3/n8BPuOqFBeAxe/0D+AXYD8zDlbTf3N8IFNmZPcD3wCRgud1zEPgZaLHs1wJbgPeAU/axXVedS0D7gJEtwBRgBTDXXvss+3ngR+Au4EG750bg0Oh+RgvMxfXDQqAIeBCYbts97QPHgQPAWWA68BgQAL4HngcKdewkAQHgTlzfLAbuAjLtvjPASaAROAUcBWYDDwD32j3lwFPAhWvtiHbrm1F+Ddt+f9jvIaAKOGx/X7S/nwvYzgLuxHW9TGCAbTv8fgdQCxyxn6X2vgzb7x/AMqAYmGK/14JJwEv2W+2eA7YMKaHDBZ4EOoC9wLvATqDLtttsG/uB94HtwD6gC2i3jY8B7wA7gN1As21st23uAfYCZbbNDiDot491wNvAx8AhoBfosu0fsA/uAD4FXgVKcX07EuYAW4GPgMNWQJdt40/gfeAzu+cotM6T7X0G7jJ/gM4eBfMg0A48jFuuY8EteJfaO4EHgDl4r81Y8SzQCJwAlqA/JnJxnW0p8CzwKu6oSkTMBu4HXsA9UlNjnkuB6+2puMsxFcgfx+bFuEnqLCsjRiS9u+AE0IpbG7T7YpTNRlxHO+1zNKL1QRCox71QdcAtcZjKwj2j/hkwkBzH3DRct+4EWoGTOrcO/1OgzQfk4t68aZHfFzxmEoB0XF9PBwoi+2dF6YMWYDbuFQT3NDxjF3ThSuoR/8ztwgvoxUAhMAX/q9kH9FnhTcA04DZgQhS7rfjtBYE24ACu7E63c5kRtrpsn+3AOGA60GT7yMF1OlNXhz/o1+BGrRnvU1AOvIQruR8Aq/Er0gQ0c7kMdwJv4taSFru2DBeZFXY9AtTYHrpxE1+5tbPJ2n7V+jgErMatkCbuqW7C+0Y8DDTgKvxqXKSO4T/D/tQVBChOtREZZ4e/mGwHXqYLqMIVzm247lQT5fD1AD/YfpuAcrzSYbj+7rDr7cBPeInPiLC9yY7tBPbi+k7eXxNXvQlIVkptt9rVRH/+X1KGU/wC6h9YgYF7Xp0lsn7rwm2gOi+FTbho/W2vNeJ97URAjSV7GY7ZEXCVv8Tf5faiRqEfbyLqseONVviw/Y7e/y/+AYwmskRZLNOSAAAAAElFTkSuQmCC">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'><stop offset='0%25' style='stop-color:%23667eea;stop-opacity:1' /><stop offset='100%25' style='stop-color:%23764ba2;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23grad)'/><circle cx='35' cy='40' r='8' fill='white'/><circle cx='65' cy='40' r='8' fill='white'/><path d='M 30 65 Q 50 75 70 65' stroke='white' stroke-width='6' fill='none' stroke-linecap='round'/><rect x='25' y='20' width='15' height='8' rx='4' fill='white' opacity='0.3'/><rect x='60' y='20' width='15' height='8' rx='4' fill='white' opacity='0.3'/></svg>">
+    
     <!-- Markdown 渲染库 -->
     <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
     <!-- HTML 安全净化库 -->

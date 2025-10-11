@@ -5,9 +5,15 @@
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from typing import Dict, List, Optional, Iterator, Any
 import json
+import warnings
 from .config import settings
+
+# 禁用 SSL 警告（仅在禁用 SSL 验证时）
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 
 class GiteeAIClient:
@@ -18,7 +24,8 @@ class GiteeAIClient:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model: Optional[str] = None,
-        enable_failover: bool = True
+        enable_failover: bool = True,
+        ssl_verify: Optional[bool] = None
     ):
         """
         初始化码云 AI 客户端
@@ -28,16 +35,39 @@ class GiteeAIClient:
             base_url: API 基础 URL，如果不提供则使用默认值
             model: 使用的模型名称，如果不提供则使用默认模型
             enable_failover: 是否启用故障转移机制
+            ssl_verify: 是否验证 SSL 证书，默认从配置读取
         """
         self.api_key = api_key or settings.gitee_ai_api_key
         self.base_url = base_url or settings.gitee_ai_base_url
         self.model = model or settings.gitee_ai_model
         self.enable_failover = enable_failover
+        self.ssl_verify = ssl_verify if ssl_verify is not None else settings.ssl_verify
+        
+        # 创建带重试机制的 session
+        self.session = self._create_session()
         
         if not self.api_key:
             raise ValueError(
                 "未提供 API Key。请通过参数传入或在 .env 文件中设置 GITEE_AI_API_KEY"
             )
+    
+    def _create_session(self) -> requests.Session:
+        """创建带有重试机制的 requests session"""
+        session = requests.Session()
+        
+        # 配置重试策略
+        retry_strategy = Retry(
+            total=settings.max_retries,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE", "POST"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        return session
     
     def _get_headers(self) -> Dict[str, str]:
         """获取请求头"""
@@ -89,12 +119,13 @@ class GiteeAIClient:
             payload["max_tokens"] = max_tokens
         
         try:
-            response = requests.post(
+            response = self.session.post(
                 url,
                 headers=self._get_headers(),
                 json=payload,
                 timeout=settings.request_timeout,
-                stream=stream
+                stream=stream,
+                verify=self.ssl_verify
             )
             response.raise_for_status()
             
@@ -103,6 +134,14 @@ class GiteeAIClient:
             else:
                 return response.json()
                 
+        except requests.exceptions.SSLError as e:
+            raise Exception(
+                f"SSL 连接错误: {str(e)}\n"
+                f"建议解决方案:\n"
+                f"1. 在 .env 文件中设置 SSL_VERIFY=false\n"
+                f"2. 更新系统的 SSL 证书\n"
+                f"3. 检查网络代理设置"
+            )
         except requests.exceptions.RequestException as e:
             raise Exception(f"API 请求失败: {str(e)}")
     
@@ -170,15 +209,24 @@ class GiteeAIClient:
         }
         
         try:
-            response = requests.post(
+            response = self.session.post(
                 url,
                 headers=self._get_headers(),
                 json=payload,
-                timeout=settings.request_timeout
+                timeout=settings.request_timeout,
+                verify=self.ssl_verify
             )
             response.raise_for_status()
             result = response.json()
             return result["data"][0]["embedding"]
+        except requests.exceptions.SSLError as e:
+            raise Exception(
+                f"SSL 连接错误: {str(e)}\n"
+                f"建议解决方案:\n"
+                f"1. 在 .env 文件中设置 SSL_VERIFY=false\n"
+                f"2. 更新系统的 SSL 证书\n"
+                f"3. 检查网络代理设置"
+            )
         except requests.exceptions.RequestException as e:
             raise Exception(f"获取 embedding 失败: {str(e)}")
 

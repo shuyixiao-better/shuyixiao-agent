@@ -64,6 +64,12 @@ class Settings(BaseSettings):
         description="是否启用故障转移"
     )
     
+    # SSL 配置
+    ssl_verify: bool = Field(
+        default=False,
+        description="是否验证 SSL 证书（如遇到 SSL 错误可设为 False）"
+    )
+    
     model_config = SettingsConfigDict(
         # 优先从环境变量读取，然后从 .env 文件读取
         env_file=".env" if os.path.exists(".env") else None,
