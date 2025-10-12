@@ -70,6 +70,69 @@ class Settings(BaseSettings):
         description="是否验证 SSL 证书（如遇到 SSL 错误可设为 False）"
     )
     
+    # RAG 配置
+    # 向量数据库配置
+    vector_db_path: str = Field(
+        default="./data/chroma",
+        description="向量数据库存储路径"
+    )
+    embedding_model: str = Field(
+        default="BAAI/bge-small-zh-v1.5",
+        description="嵌入模型名称"
+    )
+    embedding_device: str = Field(
+        default="cpu",
+        description="嵌入模型运行设备 (cpu/cuda)"
+    )
+    
+    # 文档分片配置
+    chunk_size: int = Field(
+        default=500,
+        description="文档分片大小"
+    )
+    chunk_overlap: int = Field(
+        default=50,
+        description="文档分片重叠大小"
+    )
+    
+    # 检索配置
+    retrieval_top_k: int = Field(
+        default=10,
+        description="检索返回的文档数量"
+    )
+    rerank_top_k: int = Field(
+        default=5,
+        description="重排序后保留的文档数量"
+    )
+    hybrid_search_weight: float = Field(
+        default=0.5,
+        description="混合检索中向量检索的权重 (0-1)"
+    )
+    
+    # 上下文管理
+    max_context_tokens: int = Field(
+        default=4000,
+        description="最大上下文 token 数量"
+    )
+    enable_context_expansion: bool = Field(
+        default=True,
+        description="是否启用上下文扩展"
+    )
+    
+    # 查询优化
+    enable_query_rewrite: bool = Field(
+        default=True,
+        description="是否启用查询重写"
+    )
+    enable_subquery_expansion: bool = Field(
+        default=False,
+        description="是否启用子查询扩展"
+    )
+    max_subqueries: int = Field(
+        default=3,
+        description="最大子查询数量"
+    )
+    
     model_config = SettingsConfigDict(
         # 优先从环境变量读取，然后从 .env 文件读取
         env_file=".env" if os.path.exists(".env") else None,

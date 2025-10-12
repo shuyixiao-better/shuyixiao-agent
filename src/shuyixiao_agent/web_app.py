@@ -20,6 +20,7 @@ from .agents.tool_agent import ToolAgent
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
+from .rag.rag_agent import RAGAgent
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -40,6 +41,9 @@ app.add_middleware(
 # Agent 实例缓存
 agents: Dict[str, Any] = {}
 
+# RAG Agent 实例缓存
+rag_agents: Dict[str, RAGAgent] = {}
+
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
 
@@ -47,9 +51,10 @@ session_histories: Dict[str, List[Dict[str, str]]] = {}
 class ChatRequest(BaseModel):
     """聊天请求模型"""
     message: str
-    agent_type: str = "simple"  # simple 或 tool
+    agent_type: str = "simple"  # simple, tool, 或 rag
     session_id: Optional[str] = "default"
     system_message: Optional[str] = None
+    collection_name: Optional[str] = "default"  # RAG 专用：知识库集合名
 
 
 class ChatResponse(BaseModel):
@@ -63,6 +68,36 @@ class SessionHistoryResponse(BaseModel):
     """会话历史响应模型"""
     session_id: str
     messages: List[Dict[str, str]]
+
+
+class DocumentUploadRequest(BaseModel):
+    """文档上传请求模型"""
+    file_path: str
+    collection_name: Optional[str] = "default"
+
+
+class DirectoryUploadRequest(BaseModel):
+    """目录上传请求模型"""
+    directory_path: str
+    glob_pattern: Optional[str] = "**/*.*"
+    collection_name: Optional[str] = "default"
+
+
+class TextUploadRequest(BaseModel):
+    """文本上传请求模型"""
+    texts: List[str]
+    metadatas: Optional[List[Dict[str, Any]]] = None
+    collection_name: Optional[str] = "default"
+
+
+class RAGQueryRequest(BaseModel):
+    """RAG 查询请求模型"""
+    question: str
+    collection_name: Optional[str] = "default"
+    session_id: Optional[str] = "default"
+    top_k: Optional[int] = None
+    use_history: bool = True
+    optimize_query: bool = True
 
 
 def get_agent(agent_type: str, system_message: Optional[str] = None):
@@ -91,6 +126,21 @@ def get_agent(agent_type: str, system_message: Optional[str] = None):
             raise ValueError(f"未知的 agent 类型: {agent_type}")
     
     return agents[cache_key]
+
+
+def get_rag_agent(collection_name: str = "default") -> RAGAgent:
+    """获取或创建 RAG Agent 实例"""
+    if collection_name not in rag_agents:
+        rag_agents[collection_name] = RAGAgent(
+            collection_name=collection_name,
+            system_message="你是一个有帮助的AI助手。请基于提供的文档内容回答用户的问题。",
+            use_reranker=True,
+            retrieval_mode="hybrid",
+            enable_query_optimization=True,
+            enable_context_expansion=True
+        )
+    
+    return rag_agents[collection_name]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -258,6 +308,177 @@ async def health_check():
         "api_key_configured": bool(settings.gitee_ai_api_key),
         "model": settings.gitee_ai_model
     }
+
+
+# ========== RAG 相关接口 ==========
+
+@app.post("/api/rag/upload/file")
+async def upload_file(request: DocumentUploadRequest):
+    """上传单个文件到知识库"""
+    try:
+        agent = get_rag_agent(request.collection_name)
+        count = agent.add_documents_from_file(
+            request.file_path,
+            show_progress=True
+        )
+        
+        return {
+            "message": "文件上传成功",
+            "collection_name": request.collection_name,
+            "chunks_added": count,
+            "total_documents": agent.get_document_count()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传文件失败: {str(e)}")
+
+
+@app.post("/api/rag/upload/directory")
+async def upload_directory(request: DirectoryUploadRequest):
+    """上传整个目录到知识库"""
+    try:
+        agent = get_rag_agent(request.collection_name)
+        count = agent.add_documents_from_directory(
+            request.directory_path,
+            request.glob_pattern,
+            show_progress=True
+        )
+        
+        return {
+            "message": "目录上传成功",
+            "collection_name": request.collection_name,
+            "chunks_added": count,
+            "total_documents": agent.get_document_count()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传目录失败: {str(e)}")
+
+
+@app.post("/api/rag/upload/texts")
+async def upload_texts(request: TextUploadRequest):
+    """上传文本列表到知识库"""
+    try:
+        agent = get_rag_agent(request.collection_name)
+        count = agent.add_texts(
+            request.texts,
+            request.metadatas
+        )
+        
+        return {
+            "message": "文本上传成功",
+            "collection_name": request.collection_name,
+            "chunks_added": count,
+            "total_documents": agent.get_document_count()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"上传文本失败: {str(e)}")
+
+
+@app.post("/api/rag/query")
+async def rag_query(request: RAGQueryRequest):
+    """RAG 查询（非流式）"""
+    try:
+        agent = get_rag_agent(request.collection_name)
+        
+        answer = agent.query(
+            question=request.question,
+            top_k=request.top_k,
+            use_history=request.use_history,
+            optimize_query=request.optimize_query,
+            stream=False
+        )
+        
+        return {
+            "answer": answer,
+            "collection_name": request.collection_name,
+            "session_id": request.session_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查询失败: {str(e)}")
+
+
+@app.post("/api/rag/query/stream")
+async def rag_query_stream(request: RAGQueryRequest):
+    """RAG 查询（流式）"""
+    
+    async def generate():
+        try:
+            agent = get_rag_agent(request.collection_name)
+            
+            # 获取流式响应
+            stream = agent.query(
+                question=request.question,
+                top_k=request.top_k,
+                use_history=request.use_history,
+                optimize_query=request.optimize_query,
+                stream=True
+            )
+            
+            # 发送流式数据
+            for chunk in stream:
+                yield f"data: {json.dumps({'content': chunk, 'done': False}, ensure_ascii=False)}\n\n"
+            
+            # 发送完成信号
+            yield f"data: {json.dumps({'content': '', 'done': True}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            error_msg = f"查询失败: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg, 'done': True}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/rag/info/{collection_name}")
+async def get_rag_info(collection_name: str):
+    """获取 RAG 知识库信息"""
+    try:
+        agent = get_rag_agent(collection_name)
+        
+        return {
+            "collection_name": collection_name,
+            "document_count": agent.get_document_count(),
+            "retrieval_mode": agent.retrieval_mode
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取信息失败: {str(e)}")
+
+
+@app.delete("/api/rag/clear/{collection_name}")
+async def clear_rag_knowledge_base(collection_name: str):
+    """清空 RAG 知识库"""
+    try:
+        agent = get_rag_agent(collection_name)
+        agent.clear_knowledge_base()
+        
+        return {
+            "message": "知识库已清空",
+            "collection_name": collection_name
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清空知识库失败: {str(e)}")
+
+
+@app.delete("/api/rag/history/{collection_name}/{session_id}")
+async def clear_rag_history(collection_name: str, session_id: str):
+    """清空 RAG 对话历史"""
+    try:
+        agent = get_rag_agent(collection_name)
+        agent.clear_history()
+        
+        return {
+            "message": "对话历史已清空",
+            "collection_name": collection_name,
+            "session_id": session_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清空历史失败: {str(e)}")
 
 
 if __name__ == "__main__":

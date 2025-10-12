@@ -8,10 +8,12 @@ __author__ = "ShuYixiao"
 from .gitee_ai_client import GiteeAIClient
 from .agents.simple_agent import SimpleAgent
 from .config import settings
+from .rag.rag_agent import RAGAgent
 
 __all__ = [
     "GiteeAIClient",
     "SimpleAgent",
+    "RAGAgent",
     "settings",
 ]
 
