@@ -1,0 +1,57 @@
+# Gitee AI API 配置示例
+# 复制此文件为 .env 并填入你的配置
+
+# ========== 必需配置 ==========
+
+# API 密钥（必需）
+# 获取地址: https://ai.gitee.com/dashboard/settings/tokens
+GITEE_AI_API_KEY=你的API密钥
+
+# ========== 可选配置 ==========
+
+# API 基础 URL（默认值如下）
+GITEE_AI_BASE_URL=https://ai.gitee.com/v1
+
+# 使用的模型（默认 DeepSeek-V3）
+GITEE_AI_MODEL=DeepSeek-V3
+
+# SSL 验证（如遇到 SSL 错误可设为 false）
+SSL_VERIFY=false
+
+# ========== RAG 配置 ==========
+
+# 是否使用云端嵌入服务（推荐设为 true，无需下载模型）
+USE_CLOUD_EMBEDDING=true
+
+# 云端嵌入模型名称（仅当 USE_CLOUD_EMBEDDING=true 时使用）
+CLOUD_EMBEDDING_MODEL=bge-large-zh-v1.5
+
+# 本地嵌入模型配置（仅当 USE_CLOUD_EMBEDDING=false 时使用）
+# EMBEDDING_MODEL=BAAI/bge-small-zh-v1.5
+# EMBEDDING_DEVICE=cpu
+
+# 向量数据库路径
+VECTOR_DB_PATH=./data/chroma
+
+# 文档分片配置
+CHUNK_SIZE=500
+CHUNK_OVERLAP=50
+
+# 检索配置
+RETRIEVAL_TOP_K=10
+RERANK_TOP_K=5
+
+# ========== Agent 配置 ==========
+
+# Agent 最大迭代次数
+AGENT_MAX_ITERATIONS=10
+
+# 是否输出详细日志
+AGENT_VERBOSE=true
+
+# 请求超时时间（秒）
+REQUEST_TIMEOUT=60
+
+# 最大重试次数
+MAX_RETRIES=3
+

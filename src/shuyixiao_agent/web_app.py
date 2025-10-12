@@ -20,7 +20,9 @@ from .agents.tool_agent import ToolAgent
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
-from .rag.rag_agent import RAGAgent
+
+# RAG Agent 延迟导入，避免阻塞启动
+# from .rag.rag_agent import RAGAgent
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -37,6 +39,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# 启动和关闭事件
+@app.on_event("startup")
+async def startup_event():
+    """应用启动事件"""
+    print("=" * 60)
+    print("✅ ShuYixiao Agent Web 应用已启动")
+    print("=" * 60)
+    print(f"API Key 已配置: {bool(settings.gitee_ai_api_key)}")
+    print(f"使用模型: {settings.gitee_ai_model}")
+    print("=" * 60)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭事件"""
+    print("👋 ShuYixiao Agent Web 应用已关闭")
 
 # Agent 实例缓存
 agents: Dict[str, Any] = {}
@@ -128,9 +148,13 @@ def get_agent(agent_type: str, system_message: Optional[str] = None):
     return agents[cache_key]
 
 
-def get_rag_agent(collection_name: str = "default") -> RAGAgent:
-    """获取或创建 RAG Agent 实例"""
+def get_rag_agent(collection_name: str = "default"):
+    """获取或创建 RAG Agent 实例（延迟加载）"""
     if collection_name not in rag_agents:
+        # 延迟导入 RAG Agent
+        from .rag.rag_agent import RAGAgent
+        
+        print(f"[信息] 首次创建 RAG Agent: {collection_name}")
         rag_agents[collection_name] = RAGAgent(
             collection_name=collection_name,
             system_message="你是一个有帮助的AI助手。请基于提供的文档内容回答用户的问题。",
@@ -139,6 +163,7 @@ def get_rag_agent(collection_name: str = "default") -> RAGAgent:
             enable_query_optimization=True,
             enable_context_expansion=True
         )
+        print(f"[成功] RAG Agent 创建完成: {collection_name}")
     
     return rag_agents[collection_name]
 
@@ -146,12 +171,21 @@ def get_rag_agent(collection_name: str = "default") -> RAGAgent:
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     """返回前端 HTML 页面"""
+    print(f"[请求] GET / - 返回主页")
+    
     static_dir = Path(__file__).parent / "static"
     html_file = static_dir / "index.html"
     
+    print(f"[信息] 静态文件目录: {static_dir}")
+    print(f"[信息] HTML 文件路径: {html_file}")
+    print(f"[信息] 文件存在: {html_file.exists()}")
+    
     if html_file.exists():
-        return HTMLResponse(content=html_file.read_text(encoding="utf-8"))
+        content = html_file.read_text(encoding="utf-8")
+        print(f"[成功] 返回 HTML 文件, 大小: {len(content)} 字符")
+        return HTMLResponse(content=content)
     else:
+        print(f"[警告] HTML 文件不存在: {html_file}")
         return HTMLResponse(content="""
         <html>
             <body>
@@ -303,11 +337,14 @@ async def clear_history(session_id: str):
 @app.get("/api/health")
 async def health_check():
     """健康检查接口"""
-    return {
+    print(f"[请求] GET /api/health - 健康检查")
+    result = {
         "status": "healthy",
         "api_key_configured": bool(settings.gitee_ai_api_key),
         "model": settings.gitee_ai_model
     }
+    print(f"[响应] 健康检查: {result}")
+    return result
 
 
 # ========== RAG 相关接口 ==========

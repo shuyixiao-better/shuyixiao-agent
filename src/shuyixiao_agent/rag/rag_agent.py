@@ -9,6 +9,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from .embeddings import EmbeddingManager, BatchEmbeddingManager
+from .cloud_embeddings import CloudEmbeddingManager, BatchCloudEmbeddingManager
 from .vector_store import VectorStoreManager
 from .document_loader import DocumentLoader
 from .retrievers import VectorRetriever, KeywordRetriever, HybridRetriever
@@ -60,8 +61,20 @@ class RAGAgent:
         # 初始化组件
         print(f"正在初始化 RAG Agent (集合: {collection_name})...")
         
-        # 1. 嵌入模型
-        self.embedding_manager = BatchEmbeddingManager()
+        # 1. 嵌入模型（优先使用云端服务）
+        if settings.use_cloud_embedding:
+            print("✓ 使用云端嵌入服务（无需下载模型，启动更快）")
+            try:
+                self.embedding_manager = BatchCloudEmbeddingManager(
+                    model=settings.cloud_embedding_model
+                )
+            except Exception as e:
+                print(f"⚠️  云端嵌入服务初始化失败: {e}")
+                print("⚠️  请检查 API Key 配置或设置 USE_CLOUD_EMBEDDING=false 使用本地模型")
+                raise
+        else:
+            print("使用本地嵌入模型（首次启动会下载模型文件）")
+            self.embedding_manager = BatchEmbeddingManager()
         
         # 2. 向量存储
         self.vector_store = VectorStoreManager(

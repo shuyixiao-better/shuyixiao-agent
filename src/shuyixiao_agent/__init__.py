@@ -8,12 +8,20 @@ __author__ = "ShuYixiao"
 from .gitee_ai_client import GiteeAIClient
 from .agents.simple_agent import SimpleAgent
 from .config import settings
-from .rag.rag_agent import RAGAgent
+
+# RAG Agent 使用延迟导入，避免阻塞启动
+# from .rag.rag_agent import RAGAgent
 
 __all__ = [
     "GiteeAIClient",
     "SimpleAgent",
-    "RAGAgent",
+    # "RAGAgent",  # 延迟导入
     "settings",
 ]
+
+
+def lazy_import_rag_agent():
+    """延迟导入 RAG Agent"""
+    from .rag.rag_agent import RAGAgent
+    return RAGAgent
 

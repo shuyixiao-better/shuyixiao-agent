@@ -71,18 +71,30 @@ class Settings(BaseSettings):
     )
     
     # RAG 配置
+    # 嵌入服务配置
+    use_cloud_embedding: bool = Field(
+        default=True,
+        description="是否使用云端嵌入服务（推荐，无需下载模型）"
+    )
+    cloud_embedding_model: str = Field(
+        default="bge-large-zh-v1.5",
+        description="云端嵌入模型名称"
+    )
+    
     # 向量数据库配置
     vector_db_path: str = Field(
         default="./data/chroma",
         description="向量数据库存储路径"
     )
+    
+    # 本地嵌入模型配置（仅当 use_cloud_embedding=False 时使用）
     embedding_model: str = Field(
         default="BAAI/bge-small-zh-v1.5",
-        description="嵌入模型名称"
+        description="本地嵌入模型名称"
     )
     embedding_device: str = Field(
         default="cpu",
-        description="嵌入模型运行设备 (cpu/cuda)"
+        description="本地嵌入模型运行设备 (cpu/cuda)"
     )
     
     # 文档分片配置
