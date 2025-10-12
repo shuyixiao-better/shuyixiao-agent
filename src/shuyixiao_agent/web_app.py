@@ -429,6 +429,8 @@ async def health_check():
 async def upload_file(request: DocumentUploadRequest):
     """上传单个文件到知识库"""
     try:
+        # 获取规范化后的集合名称
+        normalized_name = normalize_collection_name(request.collection_name)
         agent = get_rag_agent(request.collection_name)
         count = agent.add_documents_from_file(
             request.file_path,
@@ -437,7 +439,8 @@ async def upload_file(request: DocumentUploadRequest):
         
         return {
             "message": "文件上传成功",
-            "collection_name": request.collection_name,
+            "collection_name": normalized_name,  # 返回规范化后的名称
+            "original_name": request.collection_name,  # 保留原始名称
             "chunks_added": count,
             "total_documents": agent.get_document_count()
         }
@@ -449,6 +452,8 @@ async def upload_file(request: DocumentUploadRequest):
 async def upload_directory(request: DirectoryUploadRequest):
     """上传整个目录到知识库"""
     try:
+        # 获取规范化后的集合名称
+        normalized_name = normalize_collection_name(request.collection_name)
         agent = get_rag_agent(request.collection_name)
         count = agent.add_documents_from_directory(
             request.directory_path,
@@ -458,7 +463,8 @@ async def upload_directory(request: DirectoryUploadRequest):
         
         return {
             "message": "目录上传成功",
-            "collection_name": request.collection_name,
+            "collection_name": normalized_name,  # 返回规范化后的名称
+            "original_name": request.collection_name,  # 保留原始名称
             "chunks_added": count,
             "total_documents": agent.get_document_count()
         }
@@ -470,6 +476,8 @@ async def upload_directory(request: DirectoryUploadRequest):
 async def upload_texts(request: TextUploadRequest):
     """上传文本列表到知识库"""
     try:
+        # 获取规范化后的集合名称
+        normalized_name = normalize_collection_name(request.collection_name)
         agent = get_rag_agent(request.collection_name)
         count = agent.add_texts(
             request.texts,
@@ -478,7 +486,8 @@ async def upload_texts(request: TextUploadRequest):
         
         return {
             "message": "文本上传成功",
-            "collection_name": request.collection_name,
+            "collection_name": normalized_name,  # 返回规范化后的名称
+            "original_name": request.collection_name,  # 保留原始名称
             "chunks_added": count,
             "total_documents": agent.get_document_count()
         }

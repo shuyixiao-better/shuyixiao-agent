@@ -1196,8 +1196,11 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段</div>`;
+                    const actualCollectionName = data.collection_name || collection;
+                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段到知识库 <strong>${actualCollectionName}</strong><br>总文档数: ${data.total_documents}</div>`;
                     document.getElementById('textContent').value = '';
+                    // 同步所有知识库名称输入框（使用实际的集合名称）
+                    syncCollectionName(actualCollectionName);
                 } else {
                     resultDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
                 }
@@ -1232,8 +1235,11 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段</div>`;
+                    const actualCollectionName = data.collection_name || collection;
+                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段到知识库 <strong>${actualCollectionName}</strong><br>总文档数: ${data.total_documents}</div>`;
                     document.getElementById('filePath').value = '';
+                    // 同步所有知识库名称输入框（使用实际的集合名称）
+                    syncCollectionName(actualCollectionName);
                 } else {
                     resultDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
                 }
@@ -1360,6 +1366,19 @@
                 sendRagQuery();
             }
         });
+
+        // 同步所有知识库名称输入框
+        function syncCollectionName(collectionName) {
+            // 更新所有知识库相关的输入框
+            document.getElementById('uploadCollection').value = collectionName;
+            document.getElementById('fileUploadCollection').value = collectionName;
+            document.getElementById('infoCollection').value = collectionName;
+            document.getElementById('manageCollection').value = collectionName;
+            document.getElementById('browserCollection').value = collectionName;
+            document.getElementById('ragCollection').value = collectionName;
+            
+            console.log(`已同步知识库名称: ${collectionName}`);
+        }
 
         // 文档浏览器功能
         let currentDocId = null;
