@@ -22,6 +22,7 @@ from .agents.tool_agent import ToolAgent
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
+from .database_helper import DatabaseHelper
 
 # RAG Agent 延迟导入，避免阻塞启动
 # 使用 TYPE_CHECKING 来支持类型注解而不影响运行时
@@ -50,10 +51,29 @@ app.add_middleware(
 async def startup_event():
     """应用启动事件"""
     print("=" * 60)
+    print("🚀 ShuYixiao Agent Web 应用正在启动...")
+    print("=" * 60)
+    
+    # 初始化数据库（修复权限、清理临时文件）
+    db_initialized = DatabaseHelper.initialize_database(
+        db_path=settings.vector_db_path,
+        cleanup_temp=True
+    )
+    
+    if not db_initialized:
+        print("⚠️  警告：数据库初始化失败，可能会遇到权限问题")
+    
+    # 显示数据库健康状态
+    health = DatabaseHelper.check_database_health(settings.vector_db_path)
+    print(f"📊 数据库状态: 存在={health['exists']}, 可读={health['readable']}, 可写={health['writable']}")
+    print(f"📦 数据库大小: {health['size_mb']} MB, 文件数: {health['file_count']}")
+    
+    print("=" * 60)
     print("✅ ShuYixiao Agent Web 应用已启动")
     print("=" * 60)
     print(f"API Key 已配置: {bool(settings.gitee_ai_api_key)}")
     print(f"使用模型: {settings.gitee_ai_model}")
+    print(f"数据库路径: {settings.vector_db_path}")
     print("=" * 60)
 
 
@@ -561,15 +581,56 @@ async def rag_query_stream(request: RAGQueryRequest):
 async def get_rag_info(collection_name: str):
     """获取 RAG 知识库信息"""
     try:
+        # 获取规范化后的名称
+        normalized_name = normalize_collection_name(collection_name)
         agent = get_rag_agent(collection_name)
         
+        # 查找原始名称（反向映射）
+        original_name = collection_name
+        for orig, norm in collection_name_mapping.items():
+            if norm == normalized_name:
+                original_name = orig
+                break
+        
         return {
-            "collection_name": collection_name,
+            "collection_name": normalized_name,
+            "original_name": original_name if original_name != normalized_name else None,
+            "is_normalized": original_name != normalized_name,
             "document_count": agent.get_document_count(),
             "retrieval_mode": agent.retrieval_mode
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取信息失败: {str(e)}")
+
+
+@app.get("/api/rag/mappings")
+async def get_collection_mappings():
+    """获取所有知识库名称映射关系"""
+    try:
+        mappings = []
+        for original_name, normalized_name in collection_name_mapping.items():
+            # 尝试获取文档数量
+            try:
+                if normalized_name in rag_agents:
+                    agent = rag_agents[normalized_name]
+                    doc_count = agent.get_document_count()
+                else:
+                    doc_count = None
+            except:
+                doc_count = None
+            
+            mappings.append({
+                "original_name": original_name,
+                "normalized_name": normalized_name,
+                "document_count": doc_count
+            })
+        
+        return {
+            "mappings": mappings,
+            "total_count": len(mappings)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取映射失败: {str(e)}")
 
 
 @app.delete("/api/rag/clear/{collection_name}")

@@ -842,6 +842,16 @@
                         </div>
                     </div>
 
+                    <!-- 名称映射表 -->
+                    <div class="rag-card">
+                        <h3>🔗 名称映射表</h3>
+                        <p style="font-size: 13px; color: #6c757d; margin-bottom: 12px;">
+                            显示原始知识库名称与系统内部编码名称的对应关系
+                        </p>
+                        <button class="btn btn-secondary" onclick="loadMappings()" style="width: 100%; margin-bottom: 16px;">加载映射关系</button>
+                        <div id="mappingsList"></div>
+                    </div>
+
                     <!-- 文件上传 -->
                     <div class="rag-card">
                         <h3>📁 上传文件</h3>
@@ -1197,10 +1207,23 @@
                 
                 if (response.ok) {
                     const actualCollectionName = data.collection_name || collection;
-                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段到知识库 <strong>${actualCollectionName}</strong><br>总文档数: ${data.total_documents}</div>`;
+                    const originalName = data.original_name || collection;
+                    
+                    let successMsg = `✓ 成功上传 ${data.chunks_added} 个文档片段<br>总文档数: ${data.total_documents}<br>`;
+                    if (originalName !== actualCollectionName) {
+                        successMsg += `<br>💡 <strong>名称映射</strong><br>`;
+                        successMsg += `原始名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${escapeHtml(originalName)}</code><br>`;
+                        successMsg += `编码名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${actualCollectionName}</code>`;
+                    } else {
+                        successMsg += `知识库: <strong>${actualCollectionName}</strong>`;
+                    }
+                    
+                    resultDiv.innerHTML = `<div class="alert alert-success">${successMsg}</div>`;
                     document.getElementById('textContent').value = '';
                     // 同步所有知识库名称输入框（使用实际的集合名称）
                     syncCollectionName(actualCollectionName);
+                    // 自动刷新映射表
+                    loadMappings();
                 } else {
                     resultDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
                 }
@@ -1236,10 +1259,23 @@
                 
                 if (response.ok) {
                     const actualCollectionName = data.collection_name || collection;
-                    resultDiv.innerHTML = `<div class="alert alert-success">✓ 成功上传 ${data.chunks_added} 个文档片段到知识库 <strong>${actualCollectionName}</strong><br>总文档数: ${data.total_documents}</div>`;
+                    const originalName = data.original_name || collection;
+                    
+                    let successMsg = `✓ 成功上传 ${data.chunks_added} 个文档片段<br>总文档数: ${data.total_documents}<br>`;
+                    if (originalName !== actualCollectionName) {
+                        successMsg += `<br>💡 <strong>名称映射</strong><br>`;
+                        successMsg += `原始名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${escapeHtml(originalName)}</code><br>`;
+                        successMsg += `编码名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${actualCollectionName}</code>`;
+                    } else {
+                        successMsg += `知识库: <strong>${actualCollectionName}</strong>`;
+                    }
+                    
+                    resultDiv.innerHTML = `<div class="alert alert-success">${successMsg}</div>`;
                     document.getElementById('filePath').value = '';
                     // 同步所有知识库名称输入框（使用实际的集合名称）
                     syncCollectionName(actualCollectionName);
+                    // 自动刷新映射表
+                    loadMappings();
                 } else {
                     resultDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
                 }
@@ -1260,11 +1296,28 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    let mappingHtml = '';
+                    if (data.is_normalized && data.original_name) {
+                        mappingHtml = `
+                            <div class="alert alert-info" style="margin-top: 12px; font-size: 13px;">
+                                💡 <strong>名称映射</strong><br>
+                                原始名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${escapeHtml(data.original_name)}</code><br>
+                                编码名称: <code style="background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 3px;">${data.collection_name}</code>
+                            </div>
+                        `;
+                    }
+                    
                     infoDiv.innerHTML = `
                         <div class="info-item">
                             <span class="info-label">集合名称：</span>
                             <span class="info-value">${data.collection_name}</span>
                         </div>
+                        ${data.original_name ? `
+                        <div class="info-item">
+                            <span class="info-label">原始名称：</span>
+                            <span class="info-value" style="color: #10b981;">${escapeHtml(data.original_name)}</span>
+                        </div>
+                        ` : ''}
                         <div class="info-item">
                             <span class="info-label">文档数量：</span>
                             <span class="info-value">${data.document_count}</span>
@@ -1273,12 +1326,67 @@
                             <span class="info-label">检索模式：</span>
                             <span class="info-value">${data.retrieval_mode}</span>
                         </div>
+                        ${mappingHtml}
                     `;
                 } else {
                     infoDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
                 }
             } catch (error) {
                 infoDiv.innerHTML = `<div class="alert alert-error">✗ ${error.message}</div>`;
+            }
+        }
+
+        // 加载名称映射关系
+        async function loadMappings() {
+            const mappingsDiv = document.getElementById('mappingsList');
+            
+            try {
+                mappingsDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
+                
+                const response = await fetch(`${API_BASE}/api/rag/mappings`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    if (data.mappings.length === 0) {
+                        mappingsDiv.innerHTML = '<div class="alert alert-info">暂无映射关系</div>';
+                        return;
+                    }
+                    
+                    let html = `
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px;">
+                            共 ${data.total_count} 个映射
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 8px;">
+                    `;
+                    
+                    data.mappings.forEach((mapping, index) => {
+                        const docCountText = mapping.document_count !== null ? `${mapping.document_count} 个文档` : '未加载';
+                        html += `
+                            <div style="padding: 12px; border-bottom: 1px solid #e9ecef; ${index % 2 === 0 ? 'background: #f8f9fa;' : ''}">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 12px; color: #10b981; font-weight: 600; margin-bottom: 4px;">
+                                            📝 ${escapeHtml(mapping.original_name)}
+                                        </div>
+                                        <div style="font-size: 11px; color: #6c757d; font-family: 'Courier New', monospace; word-break: break-all;">
+                                            ➜ ${mapping.normalized_name}
+                                        </div>
+                                    </div>
+                                    <div style="font-size: 11px; color: #667eea; white-space: nowrap;">
+                                        ${docCountText}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    mappingsDiv.innerHTML = html;
+                } else {
+                    mappingsDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
+                }
+            } catch (error) {
+                mappingsDiv.innerHTML = `<div class="alert alert-error">✗ ${error.message}</div>`;
             }
         }
 
