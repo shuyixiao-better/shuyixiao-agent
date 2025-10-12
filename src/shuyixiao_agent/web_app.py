@@ -12,6 +12,8 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 import os
 import json
+import re
+import hashlib
 from pathlib import Path
 from langchain_core.messages import HumanMessage
 
@@ -68,6 +70,74 @@ rag_agents: Dict[str, Any] = {}
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
+
+# 知识库名称映射（原始名称 -> 合法名称）
+collection_name_mapping: Dict[str, str] = {}
+
+
+def normalize_collection_name(name: str) -> str:
+    """
+    将用户输入的名称转换为符合 ChromaDB 要求的合法名称
+    
+    ChromaDB 要求：
+    - 3-512 个字符
+    - 只包含 [a-zA-Z0-9._-]
+    - 必须以 [a-zA-Z0-9] 开头和结尾
+    
+    Args:
+        name: 用户输入的名称
+        
+    Returns:
+        合法的集合名称
+    """
+    # 如果已经是合法名称，直接返回
+    if re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]{1,510}[a-zA-Z0-9]$', name):
+        return name
+    
+    # 如果名称已经被映射过，返回之前的映射
+    if name in collection_name_mapping:
+        return collection_name_mapping[name]
+    
+    # 生成一个基于原始名称的哈希值（作为唯一标识）
+    name_hash = hashlib.md5(name.encode('utf-8')).hexdigest()[:8]
+    
+    # 尝试从名称中提取合法字符作为前缀（提高可读性）
+    safe_prefix = re.sub(r'[^a-zA-Z0-9._-]', '', name)
+    
+    # 移除前后的非法字符
+    safe_prefix = safe_prefix.strip('._-')
+    
+    # 如果没有合法字符或太短，使用有意义的默认前缀
+    if not safe_prefix or len(safe_prefix) < 2:
+        safe_prefix = "kb"  # knowledge base
+    else:
+        # 限制前缀长度，为哈希值留出空间
+        safe_prefix = safe_prefix[:20]
+    
+    # 组合前缀和哈希值（哈希值确保唯一性，前缀提高可读性）
+    normalized_name = f"{safe_prefix}_{name_hash}"
+    
+    # 最终验证：确保以字母或数字开头和结尾
+    if not re.match(r'^[a-zA-Z0-9]', normalized_name):
+        normalized_name = "kb_" + normalized_name
+    if not re.match(r'[a-zA-Z0-9]$', normalized_name):
+        normalized_name = normalized_name + "_kb"
+    
+    # 确保长度在范围内
+    if len(normalized_name) < 3:
+        normalized_name = "kb_" + name_hash + "_default"
+    elif len(normalized_name) > 512:
+        normalized_name = normalized_name[:512]
+        # 确保截断后仍以字母或数字结尾
+        if not re.match(r'[a-zA-Z0-9]$', normalized_name):
+            normalized_name = normalized_name.rstrip('._-')
+    
+    # 保存映射关系
+    collection_name_mapping[name] = normalized_name
+    
+    print(f"[知识库名称] '{name}' -> '{normalized_name}'")
+    
+    return normalized_name
 
 
 class ChatRequest(BaseModel):
@@ -152,22 +222,26 @@ def get_agent(agent_type: str, system_message: Optional[str] = None):
 
 def get_rag_agent(collection_name: str = "default"):
     """获取或创建 RAG Agent 实例（延迟加载）"""
-    if collection_name not in rag_agents:
+    # 转换为合法的集合名称
+    normalized_name = normalize_collection_name(collection_name)
+    
+    # 使用转换后的名称作为缓存键
+    if normalized_name not in rag_agents:
         # 延迟导入 RAG Agent
         from .rag.rag_agent import RAGAgent
         
-        print(f"[信息] 首次创建 RAG Agent: {collection_name}")
-        rag_agents[collection_name] = RAGAgent(
-            collection_name=collection_name,
+        print(f"[信息] 首次创建 RAG Agent: {collection_name} (实际集合: {normalized_name})")
+        rag_agents[normalized_name] = RAGAgent(
+            collection_name=normalized_name,
             system_message="你是一个有帮助的AI助手。请基于提供的文档内容回答用户的问题。",
             use_reranker=True,
             retrieval_mode="hybrid",
             enable_query_optimization=True,
             enable_context_expansion=True
         )
-        print(f"[成功] RAG Agent 创建完成: {collection_name}")
+        print(f"[成功] RAG Agent 创建完成: {normalized_name}")
     
-    return rag_agents[collection_name]
+    return rag_agents[normalized_name]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -518,6 +592,69 @@ async def clear_rag_history(collection_name: str, session_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"清空历史失败: {str(e)}")
+
+
+@app.get("/api/rag/documents/{collection_name}")
+async def list_documents(
+    collection_name: str,
+    limit: Optional[int] = None,
+    offset: Optional[int] = None
+):
+    """列出知识库中的文档"""
+    try:
+        agent = get_rag_agent(collection_name)
+        documents = agent.list_documents(limit=limit, offset=offset)
+        
+        return {
+            "collection_name": collection_name,
+            "total_count": agent.get_document_count(),
+            "documents": documents,
+            "count": len(documents)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文档列表失败: {str(e)}")
+
+
+@app.get("/api/rag/document/{collection_name}/{doc_id}")
+async def get_document(collection_name: str, doc_id: str):
+    """获取单个文档内容"""
+    try:
+        agent = get_rag_agent(collection_name)
+        document = agent.get_document_by_id(doc_id)
+        
+        if document is None:
+            raise HTTPException(status_code=404, detail="文档不存在")
+        
+        return {
+            "collection_name": collection_name,
+            "document": document
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文档失败: {str(e)}")
+
+
+@app.delete("/api/rag/document/{collection_name}/{doc_id}")
+async def delete_document(collection_name: str, doc_id: str):
+    """删除指定文档"""
+    try:
+        agent = get_rag_agent(collection_name)
+        success = agent.delete_document(doc_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="文档不存在或删除失败")
+        
+        return {
+            "message": "文档已删除",
+            "collection_name": collection_name,
+            "document_id": doc_id,
+            "remaining_count": agent.get_document_count()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除文档失败: {str(e)}")
 
 
 if __name__ == "__main__":

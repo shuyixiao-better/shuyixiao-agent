@@ -443,6 +443,56 @@ class RAGAgent:
         """获取文档数量"""
         return self.vector_store.get_document_count()
     
+    def list_documents(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        列出知识库中的文档
+        
+        Args:
+            limit: 返回文档数量限制
+            offset: 偏移量
+            
+        Returns:
+            文档列表
+        """
+        return self.vector_store.list_documents(limit=limit, offset=offset)
+    
+    def get_document_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        根据 ID 获取文档
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            文档信息
+        """
+        return self.vector_store.get_document_by_id(doc_id)
+    
+    def delete_document(self, doc_id: str) -> bool:
+        """
+        删除指定文档
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            是否删除成功
+        """
+        success = self.vector_store.delete_document_by_id(doc_id)
+        if success:
+            # 同时从关键词检索器中移除（重新加载所有文档）
+            all_docs = self.vector_store.list_documents()
+            documents = [
+                Document(page_content=doc['text'], metadata=doc['metadata'])
+                for doc in all_docs
+            ]
+            self.keyword_retriever.update_documents(documents)
+        return success
+    
     def clear_knowledge_base(self):
         """清空知识库"""
         self.vector_store.clear()

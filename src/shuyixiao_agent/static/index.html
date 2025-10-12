@@ -509,6 +509,206 @@
         .scrollbar::-webkit-scrollbar-thumb:hover {
             background: #a1a1a1;
         }
+
+        /* 文档浏览器样式 */
+        .doc-browser {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+
+        .doc-item {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .doc-item:hover {
+            background: #f8f9fa;
+        }
+
+        .doc-item:last-child {
+            border-bottom: none;
+        }
+
+        .doc-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .doc-id {
+            font-size: 11px;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 4px;
+        }
+
+        .doc-text {
+            font-size: 13px;
+            color: #495057;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .doc-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #5568d3;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .doc-stats {
+            display: flex;
+            gap: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .doc-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .doc-stat-label {
+            color: #6c757d;
+        }
+
+        .doc-stat-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #495057;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f8f9fa;
+            color: #495057;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-body .doc-id {
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .modal-body .doc-text {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: block;
+            -webkit-line-clamp: unset;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -669,7 +869,39 @@
                             ⚠️ 清空知识库将删除所有文档，此操作不可恢复！
                         </div>
                     </div>
+
+                    <!-- 文档浏览器 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>📄 文档浏览器</h3>
+                        <div class="form-group">
+                            <label>查看知识库：</label>
+                            <input type="text" id="browserCollection" value="default" placeholder="default">
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
+                            <button class="btn btn-secondary" onclick="loadDocuments()" style="flex: 1;">加载文档列表</button>
+                            <button class="btn btn-secondary" onclick="refreshDocuments()">刷新</button>
+                        </div>
+                        <div id="docStats"></div>
+                        <div id="docBrowser"></div>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文档详情模态框 -->
+    <div id="docModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📄 文档详情</h3>
+                <button class="modal-close" onclick="closeDocModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="docModalBody">
+                <!-- 内容将通过 JavaScript 填充 -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDocModal()">关闭</button>
+                <button class="btn btn-danger" onclick="deleteCurrentDoc()" id="deleteDocBtn">删除文档</button>
             </div>
         </div>
     </div>
@@ -1128,6 +1360,200 @@
                 sendRagQuery();
             }
         });
+
+        // 文档浏览器功能
+        let currentDocId = null;
+        let currentCollection = null;
+
+        // 加载文档列表
+        async function loadDocuments(limit = 50) {
+            const collection = document.getElementById('browserCollection').value;
+            const browserDiv = document.getElementById('docBrowser');
+            const statsDiv = document.getElementById('docStats');
+
+            try {
+                browserDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
+                statsDiv.innerHTML = '';
+
+                const response = await fetch(`${API_BASE}/api/rag/documents/${collection}?limit=${limit}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    browserDiv.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
+                    return;
+                }
+
+                // 显示统计信息
+                statsDiv.innerHTML = `
+                    <div class="doc-stats">
+                        <div class="doc-stat-item">
+                            <span class="doc-stat-label">知识库：</span>
+                            <span class="doc-stat-value">${data.collection_name}</span>
+                        </div>
+                        <div class="doc-stat-item">
+                            <span class="doc-stat-label">总文档数：</span>
+                            <span class="doc-stat-value">${data.total_count}</span>
+                        </div>
+                        <div class="doc-stat-item">
+                            <span class="doc-stat-label">显示：</span>
+                            <span class="doc-stat-value">${data.count} / ${data.total_count}</span>
+                        </div>
+                    </div>
+                `;
+
+                if (data.documents.length === 0) {
+                    browserDiv.innerHTML = '<div class="alert alert-info">该知识库暂无文档</div>';
+                    return;
+                }
+
+                // 渲染文档列表
+                let html = '<div class="doc-browser scrollbar">';
+                data.documents.forEach(doc => {
+                    const shortText = doc.text.length > 100 ? doc.text.substring(0, 100) + '...' : doc.text;
+                    html += `
+                        <div class="doc-item">
+                            <div class="doc-content">
+                                <div class="doc-id">ID: ${doc.id}</div>
+                                <div class="doc-text">${escapeHtml(shortText)}</div>
+                            </div>
+                            <div class="doc-actions">
+                                <button class="btn btn-sm btn-view" onclick="viewDocument('${escapeAttr(collection)}', '${escapeAttr(doc.id)}')">查看</button>
+                                <button class="btn btn-sm btn-delete" onclick="deleteDocumentById('${escapeAttr(collection)}', '${escapeAttr(doc.id)}')">删除</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                browserDiv.innerHTML = html;
+
+            } catch (error) {
+                browserDiv.innerHTML = `<div class="alert alert-error">✗ ${error.message}</div>`;
+            }
+        }
+
+        // 刷新文档列表
+        function refreshDocuments() {
+            loadDocuments();
+        }
+
+        // 查看文档详情
+        async function viewDocument(collection, docId) {
+            currentCollection = collection;
+            currentDocId = docId;
+
+            const modal = document.getElementById('docModal');
+            const modalBody = document.getElementById('docModalBody');
+
+            try {
+                modalBody.innerHTML = '<div class="alert alert-info">加载中...</div>';
+                modal.classList.add('active');
+
+                const response = await fetch(`${API_BASE}/api/rag/document/${collection}/${docId}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    modalBody.innerHTML = `<div class="alert alert-error">✗ ${data.detail}</div>`;
+                    return;
+                }
+
+                const doc = data.document;
+                modalBody.innerHTML = `
+                    <div class="doc-id">ID: ${doc.id}</div>
+                    <div class="doc-text">${escapeHtml(doc.text)}</div>
+                    ${doc.metadata && Object.keys(doc.metadata).length > 0 ? `
+                        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e9ecef;">
+                            <strong style="font-size: 13px; color: #6c757d;">元数据：</strong>
+                            <pre style="margin-top: 8px; background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 12px;">${JSON.stringify(doc.metadata, null, 2)}</pre>
+                        </div>
+                    ` : ''}
+                `;
+
+            } catch (error) {
+                modalBody.innerHTML = `<div class="alert alert-error">✗ ${error.message}</div>`;
+            }
+        }
+
+        // 关闭模态框
+        function closeDocModal() {
+            const modal = document.getElementById('docModal');
+            modal.classList.remove('active');
+            currentDocId = null;
+            currentCollection = null;
+        }
+
+        // 点击模态框背景关闭
+        document.getElementById('docModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDocModal();
+            }
+        });
+
+        // 删除当前查看的文档
+        async function deleteCurrentDoc() {
+            if (!currentDocId || !currentCollection) return;
+
+            if (!confirm('确定要删除这个文档吗？此操作不可恢复！')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rag/document/${currentCollection}/${currentDocId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('✓ 文档已删除');
+                    closeDocModal();
+                    // 刷新文档列表
+                    if (document.getElementById('browserCollection').value === currentCollection) {
+                        loadDocuments();
+                    }
+                } else {
+                    alert(`✗ 删除失败: ${data.detail}`);
+                }
+            } catch (error) {
+                alert(`✗ 删除失败: ${error.message}`);
+            }
+        }
+
+        // 直接删除文档（从列表）
+        async function deleteDocumentById(collection, docId) {
+            if (!confirm('确定要删除这个文档吗？此操作不可恢复！')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rag/document/${collection}/${docId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert('✓ 文档已删除');
+                    // 刷新文档列表
+                    loadDocuments();
+                } else {
+                    alert(`✗ 删除失败: ${data.detail}`);
+                }
+            } catch (error) {
+                alert(`✗ 删除失败: ${error.message}`);
+            }
+        }
+
+        // HTML 转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 属性转义函数
+        function escapeAttr(text) {
+            return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
 
         // 页面加载时检查健康状态
         window.addEventListener('load', async () => {

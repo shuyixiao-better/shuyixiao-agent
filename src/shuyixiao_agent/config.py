@@ -9,6 +9,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from typing import Optional
 import os
+from pathlib import Path
+
+# 项目根目录（config.py 的上上上级目录）
+PROJECT_ROOT = Path(__file__).parent.parent.parent.resolve()
 
 
 class Settings(BaseSettings):
@@ -96,8 +100,8 @@ class Settings(BaseSettings):
     
     # 向量数据库配置
     vector_db_path: str = Field(
-        default="./data/chroma",
-        description="向量数据库存储路径"
+        default=str(PROJECT_ROOT / "data" / "chroma"),
+        description="向量数据库存储路径（绝对路径，基于项目根目录）"
     )
     
     # 本地嵌入模型配置（仅当 use_cloud_embedding=False 时使用）

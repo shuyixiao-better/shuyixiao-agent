@@ -198,6 +198,91 @@ class VectorStoreManager:
         """获取文档数量"""
         return self.collection.count()
     
+    def list_documents(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        列出集合中的文档
+        
+        Args:
+            limit: 返回文档数量限制
+            offset: 偏移量
+            
+        Returns:
+            文档列表，每个文档包含 id, text, metadata
+        """
+        try:
+            # 获取所有文档
+            results = self.collection.get(
+                limit=limit,
+                offset=offset,
+                include=['documents', 'metadatas']
+            )
+            
+            documents = []
+            ids = results.get('ids', [])
+            texts = results.get('documents', [])
+            metadatas = results.get('metadatas', [])
+            
+            for i, doc_id in enumerate(ids):
+                documents.append({
+                    'id': doc_id,
+                    'text': texts[i] if i < len(texts) else '',
+                    'metadata': metadatas[i] if i < len(metadatas) else {}
+                })
+            
+            return documents
+        except Exception as e:
+            print(f"列出文档时出错: {e}")
+            return []
+    
+    def get_document_by_id(self, doc_id: str) -> Optional[Dict[str, Any]]:
+        """
+        根据 ID 获取单个文档
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            文档信息字典，包含 id, text, metadata
+        """
+        try:
+            results = self.collection.get(
+                ids=[doc_id],
+                include=['documents', 'metadatas']
+            )
+            
+            if results and results.get('ids'):
+                return {
+                    'id': results['ids'][0],
+                    'text': results['documents'][0] if results.get('documents') else '',
+                    'metadata': results['metadatas'][0] if results.get('metadatas') else {}
+                }
+            return None
+        except Exception as e:
+            print(f"获取文档时出错: {e}")
+            return None
+    
+    def delete_document_by_id(self, doc_id: str) -> bool:
+        """
+        根据 ID 删除单个文档
+        
+        Args:
+            doc_id: 文档 ID
+            
+        Returns:
+            是否删除成功
+        """
+        try:
+            self.collection.delete(ids=[doc_id])
+            print(f"已删除文档: {doc_id}")
+            return True
+        except Exception as e:
+            print(f"删除文档时出错: {e}")
+            return False
+    
     def clear(self) -> None:
         """清空集合"""
         try:
