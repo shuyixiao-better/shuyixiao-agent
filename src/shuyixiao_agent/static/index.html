@@ -198,17 +198,19 @@
             border-bottom-right-radius: 5px;
         }
 
-        .message.assistant {
-            position: relative;
-        }
-
         .message.assistant .message-content {
             background: white;
             color: #333;
             border: 1px solid #dee2e6;
             border-bottom-left-radius: 5px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            position: relative;
             padding-bottom: 45px;
+        }
+
+        /* 消息文本区域 */
+        .message-text {
+            min-height: 20px;
         }
 
         /* 复制按钮容器 */
@@ -644,11 +646,13 @@
             // 如果提供了messageId，尝试查找现有消息
             let messageDiv = messageId ? document.getElementById(messageId) : null;
             let contentDiv;
+            let messageTextDiv;
             let isNewMessage = false;
             
             if (messageDiv) {
                 // 更新现有消息
                 contentDiv = messageDiv.querySelector('.message-content');
+                messageTextDiv = contentDiv.querySelector('.message-text');
             } else {
                 // 创建新消息
                 isNewMessage = true;
@@ -661,6 +665,13 @@
                 contentDiv = document.createElement('div');
                 contentDiv.className = 'message-content';
                 
+                // 为助手消息创建文本区域
+                if (role === 'assistant') {
+                    messageTextDiv = document.createElement('div');
+                    messageTextDiv.className = 'message-text';
+                    contentDiv.appendChild(messageTextDiv);
+                }
+                
                 messageDiv.appendChild(contentDiv);
                 chatContainer.appendChild(messageDiv);
             }
@@ -668,27 +679,26 @@
             // 根据角色决定是否渲染 Markdown
             if (skipMarkdown) {
                 // 直接设置HTML（用于打字指示器等）
-                contentDiv.innerHTML = content;
+                if (messageTextDiv) {
+                    messageTextDiv.innerHTML = content;
+                } else {
+                    contentDiv.innerHTML = content;
+                }
             } else if (role === 'assistant') {
                 // 保存原始Markdown内容到data属性
                 messageDiv.setAttribute('data-markdown', content);
-                console.log('保存Markdown到data-markdown属性，长度:', content.length);
-                // AI 回复使用 Markdown 渲染
-                contentDiv.innerHTML = renderMarkdown(content);
+                // AI 回复使用 Markdown 渲染到 messageTextDiv
+                messageTextDiv.innerHTML = renderMarkdown(content);
                 
-                // 添加复制控件（只在新消息创建时添加一次，放在 messageDiv 而不是 contentDiv）
-                let copyControls = messageDiv.querySelector('.copy-controls');
+                // 添加复制控件（只在新消息创建时添加一次，放在 contentDiv 内部）
+                let copyControls = contentDiv.querySelector('.copy-controls');
                 if (!copyControls) {
                     const actualId = messageDiv.id || `msg-${Date.now()}`;
                     if (!messageDiv.id) {
                         messageDiv.id = actualId;
                     }
-                    console.log('创建新的复制控件，ID:', actualId);
                     copyControls = createCopyControls(actualId);
-                    messageDiv.appendChild(copyControls);
-                    console.log('复制控件已添加到messageDiv');
-                } else {
-                    console.log('复制控件已存在，跳过创建');
+                    contentDiv.appendChild(copyControls);
                 }
             } else {
                 // 用户消息保持纯文本
@@ -703,7 +713,6 @@
 
         // 创建复制控件
         function createCopyControls(messageId) {
-            console.log('创建复制控件，messageId:', messageId);
             const controlsDiv = document.createElement('div');
             controlsDiv.className = 'copy-controls';
             
@@ -730,7 +739,6 @@
             copyBtn.onclick = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('复制按钮被点击，messageId:', messageId, 'format:', formatSelector.value);
                 copyMessage(messageId, formatSelector.value, copyBtn);
             };
             
@@ -742,33 +750,25 @@
 
         // 复制消息内容
         async function copyMessage(messageId, format, btnElement) {
-            console.log('复制消息函数被调用，messageId:', messageId, 'format:', format);
             const messageDiv = document.getElementById(messageId);
             if (!messageDiv) {
                 console.error('找不到消息元素:', messageId);
                 return;
             }
             
-            const contentDiv = messageDiv.querySelector('.message-content');
+            const messageTextDiv = messageDiv.querySelector('.message-text');
             let textToCopy = '';
             
             if (format === 'markdown') {
                 // 复制原始Markdown（从messageDiv获取）
                 textToCopy = messageDiv.getAttribute('data-markdown') || '';
-                console.log('Markdown内容:', textToCopy.substring(0, 100) + '...');
             } else {
-                // 复制纯文本（去除HTML标签）
-                textToCopy = contentDiv ? contentDiv.textContent || '' : '';
-                console.log('纯文本内容:', textToCopy.substring(0, 100) + '...');
-            }
-            
-            if (!textToCopy) {
-                console.warn('没有内容可复制');
+                // 复制纯文本（从messageTextDiv获取文本内容）
+                textToCopy = messageTextDiv ? messageTextDiv.textContent || '' : '';
             }
             
             try {
                 await navigator.clipboard.writeText(textToCopy);
-                console.log('复制成功！');
                 
                 // 显示成功反馈
                 const originalHTML = btnElement.innerHTML;
