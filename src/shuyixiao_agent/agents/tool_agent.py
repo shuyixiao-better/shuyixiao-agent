@@ -11,6 +11,7 @@ import operator
 import json
 
 from ..gitee_ai_client import GiteeAIClient
+from ..config import settings
 
 
 class ToolAgentState(TypedDict):
@@ -40,11 +41,15 @@ class ToolAgent:
         
         Args:
             api_key: 码云 AI API Key
-            model: 使用的模型名称
+            model: 使用的模型名称（留空则使用配置的 AGENT_MODEL 或默认模型）
             tools: 工具列表
             system_message: 系统提示词
             max_iterations: 最大迭代次数
         """
+        # 如果配置了专用的 Agent 模型，使用该模型
+        if model is None:
+            model = settings.agent_model or settings.gitee_ai_model
+        
         self.client = GiteeAIClient(api_key=api_key, model=model)
         self.system_message = system_message
         self.max_iterations = max_iterations

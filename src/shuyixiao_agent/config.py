@@ -33,9 +33,23 @@ class Settings(BaseSettings):
         default="https://ai.gitee.com/v1",
         description="Gitee AI API 基础 URL"
     )
+    
+    # 主对话模型配置
+    use_cloud_chat_model: bool = Field(
+        default=True,
+        description="是否使用云端对话模型"
+    )
     gitee_ai_model: str = Field(
         default="DeepSeek-V3",
-        description="默认使用的模型名称"
+        description="云端对话模型名称"
+    )
+    local_chat_model: str = Field(
+        default="",
+        description="本地对话模型路径（仅当 use_cloud_chat_model=False 时使用）"
+    )
+    local_chat_device: str = Field(
+        default="cpu",
+        description="本地对话模型运行设备 (cpu/cuda)"
     )
     
     # Agent 配置
@@ -70,8 +84,7 @@ class Settings(BaseSettings):
         description="是否验证 SSL 证书（如遇到 SSL 错误可设为 False）"
     )
     
-    # RAG 配置
-    # 嵌入服务配置
+    # RAG 嵌入模型配置
     use_cloud_embedding: bool = Field(
         default=True,
         description="是否使用云端嵌入服务（推荐，无需下载模型）"
@@ -121,7 +134,7 @@ class Settings(BaseSettings):
         description="混合检索中向量检索的权重 (0-1)"
     )
     
-    # 重排序配置
+    # RAG 重排序模型配置
     use_cloud_reranker: bool = Field(
         default=True,
         description="是否使用云端重排序服务（推荐，无需下载模型）"
@@ -137,6 +150,18 @@ class Settings(BaseSettings):
     reranker_device: str = Field(
         default="cpu",
         description="本地重排序模型运行设备 (cpu/cuda)"
+    )
+    
+    # 查询优化模型配置
+    query_optimizer_model: str = Field(
+        default="",
+        description="查询优化使用的模型名称（留空则使用 gitee_ai_model）"
+    )
+    
+    # Agent 模型配置
+    agent_model: str = Field(
+        default="",
+        description="Agent 使用的模型名称（留空则使用 gitee_ai_model）"
     )
     
     # 上下文管理

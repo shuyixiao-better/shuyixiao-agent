@@ -34,7 +34,11 @@ class QueryOptimizer:
             enable_subquery_expansion: 是否启用子查询扩展
             max_subqueries: 最大子查询数量
         """
-        self.client = client or GiteeAIClient()
+        # 如果配置了专用的查询优化模型，使用该模型
+        if settings.query_optimizer_model:
+            self.client = client or GiteeAIClient(model=settings.query_optimizer_model)
+        else:
+            self.client = client or GiteeAIClient()
         self.enable_query_rewrite = (
             enable_query_rewrite 
             if enable_query_rewrite is not None 

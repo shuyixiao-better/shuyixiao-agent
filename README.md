@@ -13,6 +13,7 @@
 
 - 🚀 **基于 LangGraph**：使用业界主流的 Agent 框架
 - 🤖 **码云 AI 集成**：接入码云 AI Serverless API，支持多种模型
+- ⚙️ **灵活模型配置**：支持为不同任务配置不同模型，云端/本地自由切换
 - 📖 **RAG 系统**：完整的检索增强生成系统，支持知识库问答
   - 多模态检索（向量、关键词、混合）
   - 智能查询优化（重写、修订、子问题扩展）
@@ -66,7 +67,7 @@ poetry shell
 
 ```bash
 # 复制环境变量示例文件
-cp .env.example .env
+cp env_config_example.txt .env
 
 # 编辑 .env 文件，填入你的码云 AI API Key
 # GITEE_AI_API_KEY=your_api_key_here
@@ -77,6 +78,31 @@ cp .env.example .env
 2. 前往 **工作台 -> 设置 -> 访问令牌**
 3. 创建新的访问令牌
 4. 购买模型资源包
+
+**配置模型（可选）：**
+
+所有模型都可以通过 `.env` 文件灵活配置。查看 [模型配置文档](docs/model_configuration.md) 了解详情。
+
+```bash
+# 主对话模型（默认：DeepSeek-V3）
+GITEE_AI_MODEL=DeepSeek-V3
+
+# Agent 专用模型（留空则使用主对话模型）
+AGENT_MODEL=GLM-4-Flash
+
+# 查询优化模型（留空则使用主对话模型）
+QUERY_OPTIMIZER_MODEL=Qwen2.5-14B-Instruct
+
+# RAG 嵌入模型（推荐使用云端）
+USE_CLOUD_EMBEDDING=true
+CLOUD_EMBEDDING_MODEL=bge-large-zh-v1.5
+
+# RAG 重排序模型（推荐使用云端）
+USE_CLOUD_RERANKER=true
+CLOUD_RERANKER_MODEL=bge-reranker-base
+```
+
+💡 **提示**：运行 `python test_model_config.py` 验证配置是否正确
 
 ### 3. 启动 Web 界面（推荐）
 
@@ -179,6 +205,7 @@ shuyixiao-agent/
 │   ├── api_reference.md          # API 参考
 │   ├── langgraph_architecture.md # LangGraph 架构
 │   ├── best_practices.md         # 最佳实践
+│   ├── model_configuration.md    # 模型配置指南 ⭐ 新增
 │   ├── web_interface.md          # Web 界面使用指南
 │   └── rag_guide.md              # RAG 使用指南
 ├── data/                          # 数据目录（自动创建）
@@ -467,8 +494,10 @@ Web 服务提供以下 API：
 ## 📚 文档
 
 - [快速开始](docs/getting_started.md) - 详细的安装和配置指南
+- [模型配置指南](docs/model_configuration.md) - ⭐ **灵活配置不同任务使用不同模型**
 - [工具参考](docs/tools_reference.md) - 所有13个内置工具的详细文档
 - [Web 界面使用指南](docs/web_interface.md) - Web 界面使用说明
+- [RAG 使用指南](docs/rag_guide.md) - 检索增强生成系统使用指南
 - [API 参考](docs/api_reference.md) - 完整的 API 文档
 - [LangGraph 架构](docs/langgraph_architecture.md) - 深入了解架构设计
 - [示例代码](examples/README.md) - 查看所有示例
@@ -480,19 +509,42 @@ Web 服务提供以下 API：
 | 配置项 | 说明 | 默认值 |
 |--------|------|--------|
 | `GITEE_AI_API_KEY` | 码云 AI API Key | 必填 |
-| `GITEE_AI_MODEL` | 使用的模型 | `Qwen/Qwen2.5-7B-Instruct` |
+| `GITEE_AI_MODEL` | 主对话模型 | `DeepSeek-V3` |
+| `AGENT_MODEL` | Agent 专用模型（可选） | 空（使用主模型） |
+| `QUERY_OPTIMIZER_MODEL` | 查询优化模型（可选） | 空（使用主模型） |
+| `USE_CLOUD_EMBEDDING` | 使用云端嵌入服务 | `true` |
+| `CLOUD_EMBEDDING_MODEL` | 云端嵌入模型 | `bge-large-zh-v1.5` |
+| `USE_CLOUD_RERANKER` | 使用云端重排序服务 | `true` |
+| `CLOUD_RERANKER_MODEL` | 云端重排序模型 | `bge-reranker-base` |
 | `AGENT_MAX_ITERATIONS` | Agent 最大迭代次数 | `10` |
 | `ENABLE_FAILOVER` | 是否启用故障转移 | `true` |
 | `REQUEST_TIMEOUT` | 请求超时时间（秒） | `60` |
+
+💡 **更多配置选项**：查看 [模型配置指南](docs/model_configuration.md) 了解如何为不同任务配置不同模型
 
 ## 🤝 可用模型
 
 码云 AI 支持多种模型，包括：
 
-- **Qwen/Qwen2.5-7B-Instruct** - 通用对话（推荐入门）
-- **Qwen/Qwen2.5-14B-Instruct** - 更强性能
-- **Qwen/Qwen2.5-72B-Instruct** - 最强性能
-- 更多模型见 [码云 AI 模型广场](https://ai.gitee.com/serverless)
+### 对话模型（用于 Agent、对话、查询优化）
+- **DeepSeek-V3** - ⭐ 推荐，强大的通用模型
+- **Qwen2.5-72B-Instruct** - 强大的中文理解
+- **Qwen2.5-14B-Instruct** - 平衡性能和速度
+- **GLM-4-Plus** - 智谱 AI 高性能模型
+- **GLM-4-Flash** - 快速响应模型
+
+### 向量化模型（用于 RAG 嵌入）
+- **bge-large-zh-v1.5** - ⭐ 推荐，1024 维
+- **bge-small-zh-v1.5** - 512 维，速度快
+- **text-embedding-ada-002** - OpenAI 兼容
+
+### 重排序模型（用于 RAG 重排序）
+- **bge-reranker-base** - ⭐ 推荐
+- **bge-reranker-large** - 更高精度
+
+📖 **完整模型列表和配置方法**：
+- [Gitee AI 模型文档](https://ai.gitee.com/docs/products/apis)
+- [本项目模型配置指南](docs/model_configuration.md)
 
 ## 📋 TODO
 
