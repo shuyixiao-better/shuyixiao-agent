@@ -41,6 +41,17 @@ CHUNK_OVERLAP=50
 RETRIEVAL_TOP_K=10
 RERANK_TOP_K=5
 
+# 重排序配置
+# 是否使用云端重排序服务（推荐设为 true，无需下载模型）
+USE_CLOUD_RERANKER=true
+
+# 云端重排序模型名称（仅当 USE_CLOUD_RERANKER=true 时使用）
+CLOUD_RERANKER_MODEL=bge-reranker-base
+
+# 本地重排序模型配置（仅当 USE_CLOUD_RERANKER=false 时使用）
+# RERANKER_MODEL=BAAI/bge-reranker-base
+# RERANKER_DEVICE=cpu
+
 # ========== Agent 配置 ==========
 
 # Agent 最大迭代次数

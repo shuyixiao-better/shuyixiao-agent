@@ -121,6 +121,24 @@ class Settings(BaseSettings):
         description="混合检索中向量检索的权重 (0-1)"
     )
     
+    # 重排序配置
+    use_cloud_reranker: bool = Field(
+        default=True,
+        description="是否使用云端重排序服务（推荐，无需下载模型）"
+    )
+    cloud_reranker_model: str = Field(
+        default="bge-reranker-base",
+        description="云端重排序模型名称"
+    )
+    reranker_model: str = Field(
+        default="BAAI/bge-reranker-base",
+        description="本地重排序模型名称（仅当 use_cloud_reranker=False 时使用）"
+    )
+    reranker_device: str = Field(
+        default="cpu",
+        description="本地重排序模型运行设备 (cpu/cuda)"
+    )
+    
     # 上下文管理
     max_context_tokens: int = Field(
         default=4000,

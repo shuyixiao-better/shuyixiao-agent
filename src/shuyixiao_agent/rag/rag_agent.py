@@ -14,7 +14,7 @@ from .vector_store import VectorStoreManager
 from .document_loader import DocumentLoader
 from .retrievers import VectorRetriever, KeywordRetriever, HybridRetriever
 from .query_optimizer import QueryOptimizer
-from .reranker import Reranker, SimpleReranker
+from .reranker import Reranker, SimpleReranker, CloudReranker
 from .context_manager import ContextManager
 
 from ..gitee_ai_client import GiteeAIClient
@@ -96,13 +96,27 @@ class RAGAgent:
         # 5. 查询优化器
         self.query_optimizer = QueryOptimizer() if enable_query_optimization else None
         
-        # 6. 重排序器
+        # 6. 重排序器（优先使用云端服务）
         if use_reranker:
-            try:
-                self.reranker = Reranker()
-            except Exception as e:
-                print(f"重排序器初始化失败，使用简单重排序器: {e}")
-                self.reranker = SimpleReranker()
+            if settings.use_cloud_reranker:
+                print("✓ 使用云端重排序服务（无需下载模型，启动更快）")
+                try:
+                    self.reranker = CloudReranker()
+                except Exception as e:
+                    print(f"⚠️  云端重排序服务初始化失败: {e}")
+                    print("⚠️  降级到简单重排序器")
+                    self.reranker = SimpleReranker()
+            else:
+                print("使用本地重排序模型（首次启动会下载模型文件）")
+                try:
+                    self.reranker = Reranker(
+                        model_name=settings.reranker_model,
+                        device=settings.reranker_device
+                    )
+                except Exception as e:
+                    print(f"⚠️  本地重排序器初始化失败: {e}")
+                    print("⚠️  降级到简单重排序器")
+                    self.reranker = SimpleReranker()
         else:
             self.reranker = SimpleReranker()
         

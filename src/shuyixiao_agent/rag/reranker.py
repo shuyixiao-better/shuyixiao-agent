@@ -7,6 +7,8 @@
 from typing import List, Tuple, Optional
 from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
+import requests
+import time
 
 from ..config import settings
 
@@ -221,4 +223,191 @@ class SimpleReranker(Reranker):
         )
         
         return sorted_results[:k]
+
+
+class CloudReranker:
+    """
+    云端重排序器
+    
+    使用 Gitee AI 等云端 API 提供重排序服务，无需下载本地模型
+    优点：
+    - 无需下载大型模型文件
+    - 启动速度快
+    - 始终使用最新版本
+    - 支持 GPU 加速（云端）
+    """
+    
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        model: Optional[str] = None,
+        top_k: Optional[int] = None,
+        max_retries: int = 3,
+        timeout: int = 30
+    ):
+        """
+        初始化云端重排序器
+        
+        Args:
+            api_key: API 密钥，默认从配置读取
+            base_url: API 基础 URL，默认从配置读取
+            model: 重排序模型名称
+            top_k: 重排序后保留的文档数量
+            max_retries: 最大重试次数
+            timeout: 请求超时时间
+        """
+        self.api_key = api_key or settings.gitee_ai_api_key
+        self.base_url = base_url or settings.gitee_ai_base_url
+        self.model = model or settings.cloud_reranker_model
+        self.top_k = top_k or settings.rerank_top_k
+        self.max_retries = max_retries
+        self.timeout = timeout
+        
+        if not self.api_key:
+            raise ValueError(
+                "API Key 未配置！请设置 GITEE_AI_API_KEY 环境变量或在 .env 文件中配置"
+            )
+        
+        print(f"✓ 使用云端重排序服务: {self.model} (无需下载模型)")
+    
+    def _call_rerank_api(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: int
+    ) -> List[Tuple[int, float]]:
+        """
+        调用云端重排序 API
+        
+        Args:
+            query: 查询文本
+            documents: 文档文本列表
+            top_k: 返回的文档数量
+            
+        Returns:
+            (文档索引, 重排序分数) 元组列表
+        """
+        # 构建请求 URL
+        # 注意：实际的 endpoint 可能需要根据 Gitee AI 文档调整
+        url = f"{self.base_url}/rerank"
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "model": self.model,
+            "query": query,
+            "documents": documents,
+            "top_n": top_k
+        }
+        
+        # 重试机制
+        for attempt in range(self.max_retries):
+            try:
+                response = requests.post(
+                    url,
+                    headers=headers,
+                    json=data,
+                    timeout=self.timeout,
+                    verify=settings.ssl_verify
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    # 提取重排序结果
+                    # 返回格式：[{"index": 0, "relevance_score": 0.95}, ...]
+                    rerank_results = [
+                        (item["index"], item["relevance_score"]) 
+                        for item in result["results"]
+                    ]
+                    return rerank_results
+                else:
+                    error_msg = f"API 调用失败: {response.status_code} - {response.text}"
+                    if attempt < self.max_retries - 1:
+                        print(f"⚠️  {error_msg}，正在重试 ({attempt + 1}/{self.max_retries})...")
+                        time.sleep(1)
+                    else:
+                        raise Exception(error_msg)
+                        
+            except Exception as e:
+                if attempt < self.max_retries - 1:
+                    print(f"⚠️  请求失败: {e}，正在重试 ({attempt + 1}/{self.max_retries})...")
+                    time.sleep(1)
+                else:
+                    raise Exception(f"云端重排序服务调用失败: {e}")
+        
+        raise Exception("云端重排序服务调用失败：超过最大重试次数")
+    
+    def rerank(
+        self,
+        query: str,
+        documents: List[Document],
+        scores: Optional[List[float]] = None,
+        top_k: Optional[int] = None
+    ) -> List[Tuple[Document, float]]:
+        """
+        对检索结果进行重排序
+        
+        Args:
+            query: 查询文本
+            documents: 文档列表
+            scores: 原始分数列表（可选，云端重排序时不使用）
+            top_k: 返回的文档数量
+            
+        Returns:
+            (文档, 重排序分数) 元组列表
+        """
+        if not documents:
+            return []
+        
+        k = top_k or self.top_k
+        k = min(k, len(documents))  # 确保不超过文档数量
+        
+        try:
+            # 提取文档内容
+            doc_texts = [doc.page_content for doc in documents]
+            
+            # 调用云端重排序 API
+            rerank_results = self._call_rerank_api(query, doc_texts, k)
+            
+            # 构建结果
+            sorted_results = [
+                (documents[idx], score) 
+                for idx, score in rerank_results
+            ]
+            
+            return sorted_results
+        
+        except Exception as e:
+            print(f"云端重排序失败: {e}")
+            print("降级到简单重排序器")
+            # 降级到简单重排序
+            fallback_reranker = SimpleReranker(top_k=k)
+            return fallback_reranker.rerank(query, documents, scores, k)
+    
+    def rerank_results(
+        self,
+        query: str,
+        results: List[Tuple[Document, float]],
+        top_k: Optional[int] = None
+    ) -> List[Tuple[Document, float]]:
+        """
+        对带分数的检索结果进行重排序
+        
+        Args:
+            query: 查询文本
+            results: (文档, 分数) 元组列表
+            top_k: 返回的文档数量
+            
+        Returns:
+            (文档, 重排序分数) 元组列表
+        """
+        if not results:
+            return []
+        
+        documents, scores = zip(*results)
+        return self.rerank(query, list(documents), list(scores), top_k)
 
