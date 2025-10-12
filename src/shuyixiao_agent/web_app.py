@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 import os
 import json
 from pathlib import Path
@@ -22,7 +22,9 @@ from .config import settings
 from .gitee_ai_client import GiteeAIClient
 
 # RAG Agent 延迟导入，避免阻塞启动
-# from .rag.rag_agent import RAGAgent
+# 使用 TYPE_CHECKING 来支持类型注解而不影响运行时
+if TYPE_CHECKING:
+    from .rag.rag_agent import RAGAgent
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -62,7 +64,7 @@ async def shutdown_event():
 agents: Dict[str, Any] = {}
 
 # RAG Agent 实例缓存
-rag_agents: Dict[str, RAGAgent] = {}
+rag_agents: Dict[str, Any] = {}
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
