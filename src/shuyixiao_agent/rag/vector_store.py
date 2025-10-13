@@ -27,15 +27,17 @@ class VectorStoreManager:
         self,
         collection_name: str = "default",
         persist_directory: Optional[str] = None,
-        embedding_manager: Optional[EmbeddingManager] = None
+        embedding_manager: Optional[EmbeddingManager] = None,
+        original_name: Optional[str] = None
     ):
         """
         初始化向量存储管理器
         
         Args:
-            collection_name: 集合名称
+            collection_name: 集合名称（规范化后的名称）
             persist_directory: 持久化目录
             embedding_manager: 嵌入模型管理器
+            original_name: 原始名称（用户输入的名称，用于映射恢复）
         """
         self.collection_name = collection_name
         self.persist_directory = persist_directory or settings.vector_db_path
@@ -62,11 +64,20 @@ class VectorStoreManager:
             )
             print(f"已加载现有集合: {collection_name}")
         except Exception:
+            # 创建集合时保存原始名称到metadata
+            collection_metadata = {"hnsw:space": "cosine"}  # 使用余弦相似度
+            
+            # 如果有原始名称且与规范化名称不同，保存到metadata
+            if original_name and original_name != collection_name:
+                collection_metadata["original_name"] = original_name
+                print(f"已创建新集合: {collection_name} (原始名称: {original_name})")
+            else:
+                print(f"已创建新集合: {collection_name}")
+            
             self.collection = self.client.create_collection(
                 name=collection_name,
-                metadata={"hnsw:space": "cosine"}  # 使用余弦相似度
+                metadata=collection_metadata
             )
-            print(f"已创建新集合: {collection_name}")
         
         # 初始化 Langchain VectorStore
         self.vectorstore = Chroma(
@@ -267,7 +278,7 @@ class VectorStoreManager:
     
     def delete_document_by_id(self, doc_id: str) -> bool:
         """
-        根据 ID 删除单个文档
+        根据 ID 删除单个文档（物理删除）
         
         Args:
             doc_id: 文档 ID
@@ -276,22 +287,67 @@ class VectorStoreManager:
             是否删除成功
         """
         try:
+            # 删除文档
             self.collection.delete(ids=[doc_id])
-            print(f"已删除文档: {doc_id}")
+            
+            # ChromaDB 的 PersistentClient 会自动持久化删除操作
+            # 但为了确保数据立即写入磁盘，可以显式触发
+            # 注意：ChromaDB 0.4+ 版本会自动处理持久化
+            print(f"已物理删除文档: {doc_id}")
             return True
         except Exception as e:
             print(f"删除文档时出错: {e}")
             return False
     
-    def clear(self) -> None:
-        """清空集合"""
+    def batch_delete_documents(self, doc_ids: List[str]) -> Tuple[int, List[str]]:
+        """
+        批量删除文档（物理删除）
+        
+        Args:
+            doc_ids: 要删除的文档ID列表
+            
+        Returns:
+            (成功删除数量, 失败的文档ID列表)
+        """
+        success_count = 0
+        failed_ids = []
+        
         try:
+            # ChromaDB 支持批量删除
+            self.collection.delete(ids=doc_ids)
+            success_count = len(doc_ids)
+            print(f"已批量物理删除 {success_count} 个文档")
+        except Exception as e:
+            # 如果批量删除失败，尝试逐个删除
+            print(f"批量删除失败: {e}，尝试逐个删除...")
+            for doc_id in doc_ids:
+                if self.delete_document_by_id(doc_id):
+                    success_count += 1
+                else:
+                    failed_ids.append(doc_id)
+        
+        return success_count, failed_ids
+    
+    def clear(self) -> None:
+        """清空集合（物理删除所有数据）"""
+        try:
+            # 删除整个集合（物理删除）
             self.client.delete_collection(name=self.collection_name)
+            
+            # 重新创建空集合
             self.collection = self.client.create_collection(
                 name=self.collection_name,
                 metadata={"hnsw:space": "cosine"}
             )
-            print(f"已清空集合: {self.collection_name}")
+            
+            # 更新vectorstore引用
+            self.vectorstore = Chroma(
+                client=self.client,
+                collection_name=self.collection_name,
+                embedding_function=self.embedding_manager
+            )
+            
+            print(f"已物理清空集合: {self.collection_name}")
         except Exception as e:
             print(f"清空集合时出错: {e}")
     

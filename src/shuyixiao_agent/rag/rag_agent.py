@@ -41,18 +41,20 @@ class RAGAgent:
         use_reranker: bool = True,
         retrieval_mode: str = "hybrid",  # vector, keyword, hybrid
         enable_query_optimization: bool = True,
-        enable_context_expansion: bool = True
+        enable_context_expansion: bool = True,
+        original_name: Optional[str] = None
     ):
         """
         初始化 RAG Agent
         
         Args:
-            collection_name: 向量数据库集合名称
+            collection_name: 向量数据库集合名称（规范化后的名称）
             system_message: 系统消息
             use_reranker: 是否使用重排序
             retrieval_mode: 检索模式 (vector/keyword/hybrid)
             enable_query_optimization: 是否启用查询优化
             enable_context_expansion: 是否启用上下文扩展
+            original_name: 原始名称（用于持久化映射关系）
         """
         self.collection_name = collection_name
         self.system_message = system_message or "你是一个有帮助的AI助手。请基于提供的文档内容回答用户的问题。"
@@ -79,7 +81,8 @@ class RAGAgent:
         # 2. 向量存储
         self.vector_store = VectorStoreManager(
             collection_name=collection_name,
-            embedding_manager=self.embedding_manager
+            embedding_manager=self.embedding_manager,
+            original_name=original_name
         )
         
         # 3. 文档加载器
@@ -474,7 +477,7 @@ class RAGAgent:
     
     def delete_document(self, doc_id: str) -> bool:
         """
-        删除指定文档
+        删除指定文档（物理删除）
         
         Args:
             doc_id: 文档 ID
@@ -492,6 +495,28 @@ class RAGAgent:
             ]
             self.keyword_retriever.update_documents(documents)
         return success
+    
+    def batch_delete_documents(self, doc_ids: List[str]) -> tuple:
+        """
+        批量删除文档（物理删除）
+        
+        Args:
+            doc_ids: 要删除的文档ID列表
+            
+        Returns:
+            (成功删除数量, 失败的文档ID列表)
+        """
+        success_count, failed_ids = self.vector_store.batch_delete_documents(doc_ids)
+        
+        # 更新关键词检索器
+        all_docs = self.vector_store.list_documents()
+        documents = [
+            Document(page_content=doc['text'], metadata=doc['metadata'])
+            for doc in all_docs
+        ]
+        self.keyword_retriever.update_documents(documents)
+        
+        return success_count, failed_ids
     
     def clear_knowledge_base(self):
         """清空知识库"""

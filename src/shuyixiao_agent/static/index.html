@@ -523,7 +523,6 @@
             padding: 12px;
             border-bottom: 1px solid #e9ecef;
             transition: background 0.2s;
-            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
@@ -532,6 +531,11 @@
 
         .doc-item:hover {
             background: #f8f9fa;
+        }
+
+        .doc-checkbox {
+            margin-right: 8px;
+            cursor: pointer;
         }
 
         .doc-item:last-child {
@@ -834,12 +838,24 @@
                         <h3>ℹ️ 知识库信息</h3>
                         <div class="form-group">
                             <label>查询知识库：</label>
-                            <input type="text" id="infoCollection" value="default" placeholder="default">
+                            <select id="infoCollection" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                <option value="">-- 请先加载知识库列表 --</option>
+                            </select>
                         </div>
                         <button class="btn btn-secondary" onclick="getKnowledgeInfo()" style="width: 100%; margin-bottom: 16px;">刷新信息</button>
                         <div id="knowledgeInfo">
                             <div class="alert alert-info">点击"刷新信息"查看知识库状态</div>
                         </div>
+                    </div>
+
+                    <!-- 所有知识库列表 -->
+                    <div class="rag-card">
+                        <h3>📚 所有知识库</h3>
+                        <p style="font-size: 13px; color: #6c757d; margin-bottom: 12px;">
+                            显示data/chroma目录下的所有已存在知识库
+                        </p>
+                        <button class="btn btn-secondary" onclick="loadAllCollections()" style="width: 100%; margin-bottom: 16px;">刷新列表</button>
+                        <div id="collectionsList"></div>
                     </div>
 
                     <!-- 名称映射表 -->
@@ -885,11 +901,14 @@
                         <h3>📄 文档浏览器</h3>
                         <div class="form-group">
                             <label>查看知识库：</label>
-                            <input type="text" id="browserCollection" value="default" placeholder="default">
+                            <select id="browserCollection" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                <option value="">-- 请先加载知识库列表 --</option>
+                            </select>
                         </div>
                         <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                             <button class="btn btn-secondary" onclick="loadDocuments()" style="flex: 1;">加载文档列表</button>
                             <button class="btn btn-secondary" onclick="refreshDocuments()">刷新</button>
+                            <button class="btn btn-danger" onclick="batchDeleteDocuments()" id="batchDeleteBtn" style="display: none;">删除选中</button>
                         </div>
                         <div id="docStats"></div>
                         <div id="docBrowser"></div>
@@ -1286,8 +1305,14 @@
 
         // 获取知识库信息
         async function getKnowledgeInfo() {
-            const collection = document.getElementById('infoCollection').value;
+            const select = document.getElementById('infoCollection');
+            const collection = select.value;
             const infoDiv = document.getElementById('knowledgeInfo');
+            
+            if (!collection) {
+                infoDiv.innerHTML = '<div class="alert alert-error">请先选择一个知识库</div>';
+                return;
+            }
 
             try {
                 infoDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
@@ -1491,12 +1516,19 @@
         // 文档浏览器功能
         let currentDocId = null;
         let currentCollection = null;
+        let selectedDocIds = new Set();
 
         // 加载文档列表
         async function loadDocuments(limit = 50) {
-            const collection = document.getElementById('browserCollection').value;
+            const select = document.getElementById('browserCollection');
+            const collection = select.value;
             const browserDiv = document.getElementById('docBrowser');
             const statsDiv = document.getElementById('docStats');
+            
+            if (!collection) {
+                browserDiv.innerHTML = '<div class="alert alert-error">请先选择一个知识库</div>';
+                return;
+            }
 
             try {
                 browserDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
@@ -1539,7 +1571,8 @@
                     const shortText = doc.text.length > 100 ? doc.text.substring(0, 100) + '...' : doc.text;
                     html += `
                         <div class="doc-item">
-                            <div class="doc-content">
+                            <input type="checkbox" class="doc-checkbox" data-doc-id="${escapeAttr(doc.id)}" onchange="toggleDocSelection('${escapeAttr(doc.id)}', this.checked)">
+                            <div class="doc-content" style="flex: 1;">
                                 <div class="doc-id">ID: ${doc.id}</div>
                                 <div class="doc-text">${escapeHtml(shortText)}</div>
                             </div>
@@ -1552,6 +1585,10 @@
                 });
                 html += '</div>';
                 browserDiv.innerHTML = html;
+                
+                // 重置选择
+                selectedDocIds.clear();
+                updateBatchDeleteButton();
 
             } catch (error) {
                 browserDiv.innerHTML = `<div class="alert alert-error">✗ ${error.message}</div>`;
@@ -1682,12 +1719,199 @@
             return text.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
-        // 页面加载时检查健康状态
+        // 加载所有collection列表
+        async function loadAllCollections() {
+            const listDiv = document.getElementById('collectionsList');
+            
+            try {
+                console.log('[loadAllCollections] 开始加载...');
+                console.log('[loadAllCollections] listDiv:', listDiv);
+                
+                listDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
+                
+                console.log('[loadAllCollections] 正在获取collections列表...');
+                const response = await fetch(`${API_BASE}/api/rag/collections`);
+                
+                console.log('响应状态:', response.status);
+                
+                // 先解析JSON
+                let data;
+                try {
+                    data = await response.json();
+                } catch (parseError) {
+                    throw new Error(`JSON解析失败: ${parseError.message}`);
+                }
+                
+                if (response.ok) {
+                    console.log('成功获取collections:', data);
+                    
+                    if (data.collections.length === 0) {
+                        listDiv.innerHTML = '<div class="alert alert-info">暂无知识库（data/chroma目录为空）</div>';
+                        return;
+                    }
+                    
+                    let html = `
+                        <div style="font-size: 12px; color: #6c757d; margin-bottom: 8px;">
+                            共 ${data.total_count} 个知识库
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto; border: 2px solid #e9ecef; border-radius: 8px;">
+                    `;
+                    
+                    data.collections.forEach((coll, index) => {
+                        // 优先显示原始名称，如果有的话
+                        const displayName = coll.original_name || coll.collection_name;
+                        console.log(`Collection ${index}:`, coll.collection_name, '→', displayName, 'is_normalized:', coll.is_normalized);
+                        html += `
+                            <div style="padding: 12px; border-bottom: 1px solid #e9ecef; ${index % 2 === 0 ? 'background: #f8f9fa;' : ''}" onclick="selectCollection('${escapeAttr(coll.collection_name)}');" style="cursor: pointer;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;">
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 13px; color: #667eea; font-weight: 600; margin-bottom: 4px;">
+                                            📚 ${escapeHtml(displayName)}
+                                        </div>
+                                        ${coll.is_normalized ? `
+                                            <div style="font-size: 11px; color: #6c757d; font-family: 'Courier New', monospace; word-break: break-all;">
+                                                编码: ${coll.collection_name}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    <div style="font-size: 11px; color: #10b981; white-space: nowrap; font-weight: 600;">
+                                        ${coll.document_count} 个文档
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    listDiv.innerHTML = html;
+                    
+                    // 同时更新下拉选择框
+                    updateCollectionSelects(data.collections);
+                } else {
+                    console.error('获取collections失败:', data);
+                    const errorMsg = data.detail || data.message || '未知错误';
+                    listDiv.innerHTML = `<div class="alert alert-error">✗ ${errorMsg}<br><small>状态码: ${response.status}</small></div>`;
+                }
+            } catch (error) {
+                console.error('加载collections异常:', error);
+                listDiv.innerHTML = `<div class="alert alert-error">✗ ${error.message}<br><small>请检查服务器是否正常运行</small></div>`;
+            }
+        }
+
+        // 更新所有下拉选择框
+        function updateCollectionSelects(collections) {
+            const selects = [
+                document.getElementById('infoCollection'),
+                document.getElementById('browserCollection')
+            ];
+            
+            selects.forEach(select => {
+                if (!select) return;
+                
+                // 保存当前选中的值
+                const currentValue = select.value;
+                
+                // 清空并重新填充选项
+                select.innerHTML = '<option value="">-- 请选择知识库 --</option>';
+                
+                collections.forEach(coll => {
+                    const displayName = coll.original_name || coll.collection_name;
+                    const option = document.createElement('option');
+                    option.value = coll.collection_name;
+                    option.textContent = `${displayName} (${coll.document_count}个文档)`;
+                    select.appendChild(option);
+                });
+                
+                // 恢复之前的选择
+                if (currentValue && collections.find(c => c.collection_name === currentValue)) {
+                    select.value = currentValue;
+                }
+            });
+            
+            console.log(`已更新 ${selects.length} 个下拉选择框`);
+        }
+        
+        // 选择collection并同步到所有输入框
+        function selectCollection(collectionName) {
+            syncCollectionName(collectionName);
+            
+            // 同时更新下拉选择框的值
+            const infoSelect = document.getElementById('infoCollection');
+            const browserSelect = document.getElementById('browserCollection');
+            
+            if (infoSelect) infoSelect.value = collectionName;
+            if (browserSelect) browserSelect.value = collectionName;
+            
+            alert(`已选择知识库: ${collectionName}\n所有知识库输入框已同步更新`);
+        }
+
+        // 切换文档选择
+        function toggleDocSelection(docId, checked) {
+            if (checked) {
+                selectedDocIds.add(docId);
+            } else {
+                selectedDocIds.delete(docId);
+            }
+            updateBatchDeleteButton();
+        }
+
+        // 更新批量删除按钮显示
+        function updateBatchDeleteButton() {
+            const btn = document.getElementById('batchDeleteBtn');
+            if (selectedDocIds.size > 0) {
+                btn.style.display = 'inline-block';
+                btn.textContent = `删除选中 (${selectedDocIds.size})`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        // 批量删除文档
+        async function batchDeleteDocuments() {
+            if (selectedDocIds.size === 0) {
+                alert('请先选择要删除的文档');
+                return;
+            }
+
+            const collection = document.getElementById('browserCollection').value;
+            
+            if (!confirm(`确定要删除选中的 ${selectedDocIds.size} 个文档吗？此操作不可恢复！`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/rag/documents/batch`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        collection_name: collection,
+                        doc_ids: Array.from(selectedDocIds)
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`✓ 批量删除完成\n成功: ${data.success_count}\n失败: ${data.failed_count}\n剩余文档: ${data.remaining_count}`);
+                    // 刷新文档列表
+                    loadDocuments();
+                } else {
+                    alert(`✗ 批量删除失败: ${data.detail}`);
+                }
+            } catch (error) {
+                alert(`✗ 批量删除失败: ${error.message}`);
+            }
+        }
+
+        // 页面加载时检查健康状态并加载collection列表
         window.addEventListener('load', async () => {
             try {
                 const response = await fetch(`${API_BASE}/api/health`);
                 const data = await response.json();
                 console.log('Health check:', data);
+                
+                // 自动加载collection列表
+                loadAllCollections();
             } catch (error) {
                 console.error('Health check failed:', error);
             }

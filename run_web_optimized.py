@@ -74,8 +74,8 @@ def main():
     print("=" * 60)
     print()
     print("📍 访问地址:")
-    print("   🌐 Web 界面: http://localhost:8000")
-    print("   📖 API 文档: http://localhost:8000/docs")
+    print("   🌐 Web 界面: http://localhost:8001")
+    print("   📖 API 文档: http://localhost:8001/docs")
     print()
     print("💡 功能说明:")
     print("   💬 智能对话 - 简单对话和工具调用")
@@ -100,7 +100,7 @@ def main():
         uvicorn.run(
             "shuyixiao_agent.web_app:app",
             host="0.0.0.0",
-            port=8000,
+            port=8001,
             reload=False,  # 禁用 reload，更稳定
             log_level="info",
             timeout_keep_alive=60,  # 增加超时时间

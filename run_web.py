@@ -18,8 +18,8 @@ if __name__ == "__main__":
     print("🚀 启动 ShuYixiao Agent Web 界面")
     print("=" * 60)
     print()
-    print("📍 服务地址: http://localhost:8000")
-    print("📖 API 文档: http://localhost:8000/docs")
+    print("📍 服务地址: http://localhost:8001")
+    print("📖 API 文档: http://localhost:8001/docs")
     print()
     print("按 Ctrl+C 停止服务")
     print("=" * 60)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "shuyixiao_agent.web_app:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
         log_level="info"
     )

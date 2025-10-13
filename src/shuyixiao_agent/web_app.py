@@ -68,6 +68,62 @@ async def startup_event():
     print(f"📊 数据库状态: 存在={health['exists']}, 可读={health['readable']}, 可写={health['writable']}")
     print(f"📦 数据库大小: {health['size_mb']} MB, 文件数: {health['file_count']}")
     
+    # 从数据库恢复知识库名称映射关系
+    print("🔄 正在恢复知识库名称映射关系...")
+    try:
+        import chromadb
+        from chromadb.config import Settings as ChromaSettings
+        
+        client = chromadb.PersistentClient(
+            path=settings.vector_db_path,
+            settings=ChromaSettings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
+        )
+        
+        collections = client.list_collections()
+        
+        # 从配置文件加载已知映射（用于旧数据）
+        known_mappings = {}
+        mapping_file = Path(__file__).parent.parent.parent / "knowledge_base_mappings.json"
+        if mapping_file.exists():
+            try:
+                import json
+                with open(mapping_file, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                    known_mappings = config.get('mappings', {})
+                    print(f"  📄 已加载配置文件: {len(known_mappings)} 个预定义映射")
+            except Exception as e:
+                print(f"  ⚠️  加载配置文件失败: {e}")
+        
+        # 如果配置文件不存在，使用默认映射
+        if not known_mappings:
+            known_mappings = {
+                "kb_dd65ff91_kb": "舒一笑个人信息",  # 默认映射
+            }
+        
+        for collection in collections:
+            try:
+                # 从collection的metadata中读取原始名称
+                metadata = collection.metadata or {}
+                original_name = metadata.get('original_name')
+                
+                if original_name and original_name != collection.name:
+                    collection_name_mapping[original_name] = collection.name
+                    print(f"  ✓ 恢复映射(从metadata): '{original_name}' -> '{collection.name}'")
+                elif collection.name in known_mappings:
+                    # 对于旧数据，使用预定义映射
+                    original_name = known_mappings[collection.name]
+                    collection_name_mapping[original_name] = collection.name
+                    print(f"  ✓ 恢复映射(已知旧数据): '{original_name}' -> '{collection.name}'")
+            except Exception as e:
+                print(f"  ⚠️  处理collection {collection.name} 时出错: {e}")
+        
+        print(f"✅ 已恢复 {len(collection_name_mapping)} 个名称映射关系")
+    except Exception as e:
+        print(f"⚠️  恢复名称映射失败: {e}")
+    
     print("=" * 60)
     print("✅ ShuYixiao Agent Web 应用已启动")
     print("=" * 60)
@@ -257,7 +313,8 @@ def get_rag_agent(collection_name: str = "default"):
             use_reranker=True,
             retrieval_mode="hybrid",
             enable_query_optimization=True,
-            enable_context_expansion=True
+            enable_context_expansion=True,
+            original_name=collection_name  # 传递原始名称用于持久化
         )
         print(f"[成功] RAG Agent 创建完成: {normalized_name}")
     
@@ -727,12 +784,111 @@ async def delete_document(collection_name: str, doc_id: str):
         raise HTTPException(status_code=500, detail=f"删除文档失败: {str(e)}")
 
 
+@app.get("/api/rag/collections")
+async def list_collections():
+    """列出所有已存在的知识库集合"""
+    try:
+        import chromadb
+        from chromadb.config import Settings as ChromaSettings
+        
+        print(f"[列出Collections] 开始扫描数据库路径: {settings.vector_db_path}")
+        
+        # 创建客户端连接到持久化目录
+        client = chromadb.PersistentClient(
+            path=settings.vector_db_path,
+            settings=ChromaSettings(
+                anonymized_telemetry=False,
+                allow_reset=True
+            )
+        )
+        
+        # 获取所有集合
+        collections = client.list_collections()
+        print(f"[列出Collections] 找到 {len(collections)} 个集合")
+        
+        result = []
+        for collection in collections:
+            try:
+                collection_name = collection.name
+                doc_count = collection.count()
+                
+                print(f"[列出Collections] 处理集合: {collection_name}, 文档数: {doc_count}")
+                
+                # 优先从collection metadata中读取原始名称
+                metadata = collection.metadata or {}
+                original_name = metadata.get('original_name')
+                
+                # 如果metadata中没有，尝试从内存映射表中查找（包括预定义的旧数据映射）
+                if not original_name:
+                    for orig, norm in collection_name_mapping.items():
+                        if norm == collection_name:
+                            original_name = orig
+                            break
+                
+                # 如果还是没有原始名称，说明该collection名称本身就是合法的
+                if not original_name:
+                    original_name = collection_name
+                
+                is_normalized = original_name != collection_name
+                
+                print(f"[列出Collections] 集合: {collection_name}, 原始名称: {original_name}, 是否转换: {is_normalized}")
+                
+                result.append({
+                    "collection_name": collection_name,
+                    "original_name": original_name if is_normalized else None,
+                    "document_count": doc_count,
+                    "is_normalized": is_normalized
+                })
+            except Exception as coll_error:
+                print(f"[列出Collections] 处理集合 {collection.name} 时出错: {coll_error}")
+                # 继续处理其他集合
+                continue
+        
+        print(f"[列出Collections] 成功返回 {len(result)} 个集合信息")
+        return {
+            "collections": result,
+            "total_count": len(result)
+        }
+    except Exception as e:
+        import traceback
+        error_detail = f"获取集合列表失败: {str(e)}\n{traceback.format_exc()}"
+        print(f"[列出Collections] 错误: {error_detail}")
+        raise HTTPException(status_code=500, detail=f"获取集合列表失败: {str(e)}")
+
+
+class BatchDeleteRequest(BaseModel):
+    """批量删除请求模型"""
+    doc_ids: List[str]
+    collection_name: str
+
+
+@app.delete("/api/rag/documents/batch")
+async def batch_delete_documents(request: BatchDeleteRequest):
+    """批量删除文档（物理删除）"""
+    try:
+        agent = get_rag_agent(request.collection_name)
+        
+        # 使用优化的批量删除方法
+        success_count, failed_ids = agent.batch_delete_documents(request.doc_ids)
+        
+        return {
+            "message": f"批量删除完成（已物理删除）",
+            "collection_name": request.collection_name,
+            "success_count": success_count,
+            "failed_count": len(failed_ids),
+            "failed_ids": failed_ids,
+            "remaining_count": agent.get_document_count()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批量删除失败: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         "shuyixiao_agent.web_app:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True
     )
 
