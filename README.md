@@ -22,14 +22,20 @@
 - 🛠️ **工具系统**：
   - 13个基础工具（时间、计算、编码等）
   - 10个AI驱动的智能工具（代码审查、创意生成、决策分析等）
+- 🔗 **Prompt Chaining**：提示链设计模式 ⭐ 新功能
+  - 5个预定义场景（文档生成、代码审查、研究规划、故事创作、产品分析）
+  - 模块化、可控、高质量的输出
+  - 支持自定义提示链
+  - Web界面和命令行双模式
 - 🎨 **Web 界面**：现代化的交互界面，支持 RAG 知识库管理
 - 📚 **完整文档**：详细的 API 文档和使用指南
-- 💡 **丰富示例**：9个实用示例快速上手
+- 💡 **丰富示例**：11个实用示例快速上手
 
 ### 🎯 技术栈
 
 - **框架**：LangGraph、LangChain
 - **AI 模型**：码云 AI (DeepSeek-V3, Qwen, GLM-4 等)
+- **设计模式**：Prompt Chaining（提示链）
 - **RAG 组件**：ChromaDB、Sentence Transformers、BM25、Cross-Encoder
 - **编程语言**：Python 3.12+
 - **Web 框架**：FastAPI、Uvicorn
@@ -131,6 +137,10 @@ python examples/06_ai_powered_tools_demo.py
 python examples/07_rag_basic_usage.py      # RAG 基础
 python examples/08_rag_file_upload.py      # 文件上传
 python examples/09_rag_streaming.py        # 流式响应
+
+# Prompt Chaining 示例 ⭐ 新功能
+python examples/10_prompt_chaining_demo.py    # 完整功能（5个场景）
+python examples/11_prompt_chaining_simple.py  # 快速体验（3个示例）
 ```
 
 ## 📂 项目结构
@@ -140,7 +150,8 @@ shuyixiao-agent/
 ├── src/shuyixiao_agent/       # 主代码
 │   ├── agents/                # Agent 实现
 │   │   ├── simple_agent.py   # 简单对话 Agent
-│   │   └── tool_agent.py     # 工具调用 Agent
+│   │   ├── tool_agent.py     # 工具调用 Agent
+│   │   └── prompt_chaining_agent.py # 提示链 Agent ⭐
 │   ├── tools/                 # 工具集
 │   │   ├── basic_tools.py    # 基础工具（13个）
 │   │   └── ai_powered_tools.py # AI智能工具（10个）
@@ -154,11 +165,14 @@ shuyixiao-agent/
 │   ├── gitee_ai_client.py    # API 客户端
 │   ├── web_app.py             # Web 应用
 │   └── static/                # 前端资源
-├── examples/                  # 示例代码
+├── examples/                  # 示例代码（11个）
 ├── docs/                      # 文档
+│   ├── prompt_chaining_guide.md # Prompt Chaining 指南 ⭐
+│   └── ...                    # 其他文档
 ├── data/chroma/              # 向量数据库（自动创建）
 ├── run_web.py                 # Web 启动脚本
 ├── run_web_auto.py            # 自动化启动脚本
+├── PROMPT_CHAINING_README.md  # Prompt Chaining 快速开始 ⭐
 ├── .env.example               # 环境变量示例
 └── README.md                  # 本文件
 ```
@@ -232,6 +246,39 @@ for chunk in agent.query(question="介绍 LangChain", stream=True):
     print(chunk, end="", flush=True)
 ```
 
+### Prompt Chaining（提示链）⭐ 新功能
+
+```python
+from src.shuyixiao_agent.gitee_ai_client import GiteeAIClient
+from src.shuyixiao_agent.agents.prompt_chaining_agent import (
+    PromptChainingAgent,
+    DocumentGenerationChain
+)
+
+# 初始化
+llm_client = GiteeAIClient()
+agent = PromptChainingAgent(llm_client, verbose=True)
+
+# 使用文档生成链（大纲→内容→示例→润色）
+agent.create_chain("doc_gen", DocumentGenerationChain.get_steps())
+result = agent.run_chain("doc_gen", "Python 异步编程入门")
+
+if result.success:
+    print(result.final_output)  # 生成的完整文档
+    print(f"总耗时: {result.execution_time:.2f}秒")
+```
+
+**5个预定义场景**：
+- 📄 文档生成 - 自动生成技术文档
+- 🔍 代码审查 - 系统化代码审查流程
+- 🔬 研究规划 - 问题→计划转化
+- 📖 故事创作 - 创意写作工作流
+- 💡 产品分析 - 需求分析和规划
+
+详见：[Prompt Chaining 快速开始](PROMPT_CHAINING_README.md) | [完整指南](docs/prompt_chaining_guide.md)
+
+---
+
 更多示例请查看 [examples](examples/) 目录
 
 ## 🛠️ 工具系统
@@ -297,6 +344,7 @@ for chunk in agent.query(question="介绍 LangChain", stream=True):
 
 - [快速开始](docs/getting_started.md) - 详细的安装配置指南
 - [模型配置](docs/model_configuration.md) - 灵活配置不同模型
+- [Prompt Chaining 指南](docs/prompt_chaining_guide.md) ⭐ - 提示链完整教程
 - [工具参考](docs/tools_reference.md) - 所有工具的详细文档
 - [AI工具哲学](docs/ai_tools_philosophy.md) - AI工具设计理念
 - [Web 界面](docs/web_interface.md) - Web界面使用说明

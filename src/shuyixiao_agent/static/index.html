@@ -729,6 +729,7 @@
             <button class="tab active" onclick="switchTab('chat')">💬 智能对话</button>
             <button class="tab" onclick="switchTab('rag')">📚 RAG 问答</button>
             <button class="tab" onclick="switchTab('knowledge')">🗄️ 知识库管理</button>
+            <button class="tab" onclick="switchTab('prompting')">🔗 Prompt Chaining</button>
         </div>
 
         <div class="content">
@@ -914,6 +915,93 @@
                         </div>
                         <div id="docStats"></div>
                         <div id="docBrowser"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prompt Chaining 标签页 -->
+            <div id="promptingTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>🔗 Prompt Chaining - 提示链</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            将复杂任务分解为多个步骤，每个步骤专注于特定目标，前一步的输出作为下一步的输入，实现模块化、高质量的输出
+                        </p>
+                        
+                        <div class="form-group">
+                            <label>选择场景：</label>
+                            <select id="chainType" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateChainInfo()">
+                                <option value="">-- 请选择一个场景 --</option>
+                                <option value="document_gen">📄 文档生成 - 自动生成技术文档</option>
+                                <option value="code_review">🔍 代码审查 - 系统化代码审查流程</option>
+                                <option value="research">🔬 研究规划 - 问题到计划转化</option>
+                                <option value="story">📖 故事创作 - 创意写作工作流</option>
+                                <option value="product">💡 产品分析 - 需求分析和规划</option>
+                            </select>
+                        </div>
+
+                        <!-- 场景信息展示 -->
+                        <div id="chainInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">场景信息</h4>
+                            <div id="chainDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="chainSteps" style="margin-bottom: 12px;"></div>
+                            <div id="chainHint" style="font-size: 13px; color: #6c757d; font-style: italic;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="inputLabel">输入内容：</label>
+                            <textarea id="chainInput" placeholder="请先选择一个场景..." rows="8" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="runPromptChain()" id="runChainBtn" style="flex: 1;">
+                                <span>▶️ 运行提示链</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearChainResult()">
+                                🗑️ 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 执行结果展示 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="chainResultCard">
+                        <h3>📊 执行结果</h3>
+                        
+                        <!-- 进度展示 -->
+                        <div id="chainProgress" style="display: none; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <span id="currentStep" style="font-weight: 500; color: #495057;"></span>
+                                <span id="stepCounter" style="font-size: 13px; color: #6c757d;"></span>
+                            </div>
+                            <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="progressBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 步骤详情（可折叠） -->
+                        <div id="chainStepsDetails" style="margin-bottom: 20px;"></div>
+
+                        <!-- 最终输出 -->
+                        <div id="chainFinalOutput" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">✨ 最终输出</h4>
+                            <div id="finalOutputContent" class="markdown-content"></div>
+                        </div>
+
+                        <!-- 执行信息 -->
+                        <div id="chainMetadata" style="margin-top: 16px; padding: 12px; background: #e7f5ff; border-radius: 8px; font-size: 13px; color: #495057;">
+                            <!-- 元数据将通过 JavaScript 填充 -->
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button class="btn btn-secondary" onclick="copyChainResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadChainResult()">
+                                💾 下载结果
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1931,10 +2019,323 @@
                 
                 // 自动加载collection列表
                 loadAllCollections();
+                
+                // 加载提示链类型
+                loadChainTypes();
             } catch (error) {
                 console.error('Health check failed:', error);
             }
         });
+
+        // ==================== Prompt Chaining 相关函数 ====================
+
+        let chainTypes = {};
+        let currentChainResult = null;
+
+        // 加载可用的提示链类型
+        async function loadChainTypes() {
+            try {
+                const response = await fetch(`${API_BASE}/api/prompt-chaining/types`);
+                const data = await response.json();
+                chainTypes = {};
+                data.chain_types.forEach(type => {
+                    chainTypes[type.id] = type;
+                });
+                console.log('已加载提示链类型:', chainTypes);
+            } catch (error) {
+                console.error('加载提示链类型失败:', error);
+            }
+        }
+
+        // 更新场景信息
+        function updateChainInfo() {
+            const chainType = document.getElementById('chainType').value;
+            const infoDiv = document.getElementById('chainInfo');
+            const inputTextarea = document.getElementById('chainInput');
+            const runBtn = document.getElementById('runChainBtn');
+            
+            if (!chainType) {
+                infoDiv.style.display = 'none';
+                inputTextarea.placeholder = '请先选择一个场景...';
+                runBtn.disabled = true;
+                return;
+            }
+            
+            const typeInfo = chainTypes[chainType];
+            if (!typeInfo) return;
+            
+            // 显示场景信息
+            infoDiv.style.display = 'block';
+            document.getElementById('chainDescription').textContent = typeInfo.description;
+            
+            // 显示步骤
+            const stepsHtml = `
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    ${typeInfo.steps.map((step, idx) => `
+                        <div style="background: white; padding: 8px 12px; border-radius: 6px; border: 1px solid #dee2e6; font-size: 13px;">
+                            ${idx + 1}. ${step}
+                        </div>
+                    `).join(' → ')}
+                </div>
+            `;
+            document.getElementById('chainSteps').innerHTML = stepsHtml;
+            document.getElementById('chainHint').innerHTML = `💡 ${typeInfo.input_hint}`;
+            
+            // 更新输入框提示
+            inputTextarea.placeholder = typeInfo.input_hint;
+            runBtn.disabled = false;
+        }
+
+        // 运行提示链
+        async function runPromptChain() {
+            const chainType = document.getElementById('chainType').value;
+            const inputText = document.getElementById('chainInput').value.trim();
+            const runBtn = document.getElementById('runChainBtn');
+            const resultCard = document.getElementById('chainResultCard');
+            const progressDiv = document.getElementById('chainProgress');
+            const stepsDetailsDiv = document.getElementById('chainStepsDetails');
+            
+            if (!chainType) {
+                alert('请先选择一个场景');
+                return;
+            }
+            
+            if (!inputText) {
+                alert('请输入内容');
+                return;
+            }
+            
+            // 显示结果卡片和进度
+            resultCard.style.display = 'block';
+            progressDiv.style.display = 'block';
+            stepsDetailsDiv.innerHTML = '';
+            document.getElementById('finalOutputContent').innerHTML = '';
+            document.getElementById('chainMetadata').innerHTML = '';
+            
+            // 禁用按钮
+            runBtn.disabled = true;
+            runBtn.innerHTML = '<span>⏳ 执行中...</span>';
+            
+            const typeInfo = chainTypes[chainType];
+            const totalSteps = typeInfo.steps.length;
+            let currentStepNum = 0;
+            let intermediateResults = [];
+            
+            try {
+                // 使用流式 API
+                const response = await fetch(`${API_BASE}/api/prompt-chaining/run/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        input_text: inputText,
+                        chain_type: chainType,
+                        save_result: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('请求失败');
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let currentStepContent = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (!line.trim() || !line.startsWith('data: ')) continue;
+                        
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            
+                            if (data.type === 'info') {
+                                // 初始化信息
+                                document.getElementById('currentStep').textContent = '准备执行...';
+                                document.getElementById('stepCounter').textContent = `0 / ${data.total_steps}`;
+                            } else if (data.type === 'step_start') {
+                                // 步骤开始
+                                currentStepNum = data.step;
+                                currentStepContent = '';
+                                
+                                document.getElementById('currentStep').textContent = `步骤 ${data.step}: ${data.name}`;
+                                document.getElementById('stepCounter').textContent = `${data.step} / ${totalSteps}`;
+                                document.getElementById('progressBar').style.width = `${(data.step - 1) / totalSteps * 100}%`;
+                                
+                                // 添加步骤卡片
+                                const stepCard = document.createElement('div');
+                                stepCard.id = `step-${data.step}`;
+                                stepCard.style.cssText = 'background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 2px solid #dee2e6;';
+                                stepCard.innerHTML = `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <h4 style="margin: 0; color: #495057;">步骤 ${data.step}: ${data.name}</h4>
+                                        <span style="font-size: 12px; color: #6c757d;">⏳ 执行中...</span>
+                                    </div>
+                                    <div style="font-size: 13px; color: #6c757d; margin-bottom: 12px;">${data.description}</div>
+                                    <div class="markdown-content" id="step-content-${data.step}" style="background: white; padding: 12px; border-radius: 6px; min-height: 50px;"></div>
+                                `;
+                                stepsDetailsDiv.appendChild(stepCard);
+                                stepCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            } else if (data.type === 'content') {
+                                // 流式内容
+                                currentStepContent += data.content;
+                                const contentDiv = document.getElementById(`step-content-${data.step}`);
+                                if (contentDiv) {
+                                    contentDiv.textContent = currentStepContent;
+                                }
+                            } else if (data.type === 'step_complete') {
+                                // 步骤完成
+                                const stepCard = document.getElementById(`step-${data.step}`);
+                                if (stepCard) {
+                                    const statusSpan = stepCard.querySelector('span');
+                                    if (statusSpan) {
+                                        statusSpan.textContent = '✅ 完成';
+                                        statusSpan.style.color = '#28a745';
+                                    }
+                                    stepCard.style.borderColor = '#28a745';
+                                }
+                                
+                                // 渲染 Markdown
+                                const contentDiv = document.getElementById(`step-content-${data.step}`);
+                                if (contentDiv && typeof marked !== 'undefined') {
+                                    const html = marked.parse(data.output);
+                                    contentDiv.innerHTML = DOMPurify.sanitize(html);
+                                }
+                                
+                                intermediateResults.push({
+                                    step: data.step,
+                                    output: data.output
+                                });
+                                
+                                document.getElementById('progressBar').style.width = `${data.step / totalSteps * 100}%`;
+                            } else if (data.type === 'done') {
+                                // 全部完成
+                                document.getElementById('currentStep').textContent = '✅ 执行完成';
+                                document.getElementById('stepCounter').textContent = `${totalSteps} / ${totalSteps}`;
+                                document.getElementById('progressBar').style.width = '100%';
+                                
+                                // 显示最终输出
+                                const finalContent = document.getElementById('finalOutputContent');
+                                if (typeof marked !== 'undefined') {
+                                    const html = marked.parse(data.final_output);
+                                    finalContent.innerHTML = DOMPurify.sanitize(html);
+                                } else {
+                                    finalContent.textContent = data.final_output;
+                                }
+                                
+                                // 显示元数据
+                                const metadata = document.getElementById('chainMetadata');
+                                metadata.innerHTML = `
+                                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                        <div>✅ 状态: <strong>成功</strong></div>
+                                        <div>📝 总步骤: <strong>${totalSteps}</strong></div>
+                                        ${data.output_file ? `<div>💾 已保存: <strong>${data.output_file}</strong></div>` : ''}
+                                    </div>
+                                `;
+                                
+                                // 保存结果
+                                currentChainResult = {
+                                    chain_type: chainType,
+                                    chain_name: typeInfo.name,
+                                    final_output: data.final_output,
+                                    intermediate_results: intermediateResults,
+                                    output_file: data.output_file
+                                };
+                                
+                                // 滚动到最终输出
+                                document.getElementById('chainFinalOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                        } catch (e) {
+                            console.error('解析SSE数据失败:', e);
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('执行失败:', error);
+                alert('执行失败: ' + error.message);
+                
+                const metadata = document.getElementById('chainMetadata');
+                metadata.innerHTML = `
+                    <div style="color: #dc3545;">
+                        ❌ 执行失败: ${error.message}
+                    </div>
+                `;
+            } finally {
+                // 恢复按钮
+                runBtn.disabled = false;
+                runBtn.innerHTML = '<span>▶️ 运行提示链</span>';
+            }
+        }
+
+        // 清除结果
+        function clearChainResult() {
+            document.getElementById('chainResultCard').style.display = 'none';
+            document.getElementById('chainStepsDetails').innerHTML = '';
+            document.getElementById('finalOutputContent').innerHTML = '';
+            document.getElementById('chainMetadata').innerHTML = '';
+            document.getElementById('chainProgress').style.display = 'none';
+            currentChainResult = null;
+        }
+
+        // 复制结果
+        function copyChainResult() {
+            if (!currentChainResult) {
+                alert('没有可复制的结果');
+                return;
+            }
+            
+            navigator.clipboard.writeText(currentChainResult.final_output)
+                .then(() => {
+                    alert('✅ 结果已复制到剪贴板');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                });
+        }
+
+        // 下载结果
+        function downloadChainResult() {
+            if (!currentChainResult) {
+                alert('没有可下载的结果');
+                return;
+            }
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `prompt_chain_${currentChainResult.chain_type}_${timestamp}.md`;
+            
+            let content = `# ${currentChainResult.chain_name}结果\n\n`;
+            content += `**生成时间:** ${new Date().toLocaleString('zh-CN')}\n\n`;
+            content += `---\n\n`;
+            content += currentChainResult.final_output;
+            
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('已下载结果到:', filename);
+        }
     </script>
 </body>
 </html>

@@ -19,6 +19,14 @@ from langchain_core.messages import HumanMessage
 
 from .agents.simple_agent import SimpleAgent
 from .agents.tool_agent import ToolAgent
+from .agents.prompt_chaining_agent import (
+    PromptChainingAgent,
+    DocumentGenerationChain,
+    CodeReviewChain,
+    ResearchPlanningChain,
+    StoryCreationChain,
+    ProductAnalysisChain
+)
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
@@ -144,6 +152,9 @@ agents: Dict[str, Any] = {}
 # RAG Agent 实例缓存
 rag_agents: Dict[str, Any] = {}
 
+# Prompt Chaining Agent 实例缓存
+prompt_chaining_agent: Optional[PromptChainingAgent] = None
+
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
 
@@ -219,7 +230,7 @@ def normalize_collection_name(name: str) -> str:
 class ChatRequest(BaseModel):
     """聊天请求模型"""
     message: str
-    agent_type: str = "simple"  # simple, tool, 或 rag
+    agent_type: str = "simple"  # simple, tool, rag, 或 prompt_chaining
     session_id: Optional[str] = "default"
     system_message: Optional[str] = None
     collection_name: Optional[str] = "default"  # RAG 专用：知识库集合名
@@ -266,6 +277,13 @@ class RAGQueryRequest(BaseModel):
     top_k: Optional[int] = None
     use_history: bool = True
     optimize_query: bool = True
+
+
+class PromptChainingRequest(BaseModel):
+    """Prompt Chaining 请求模型"""
+    input_text: str
+    chain_type: str  # document_gen, code_review, research, story, product
+    save_result: bool = True
 
 
 def get_agent(agent_type: str, system_message: Optional[str] = None):
@@ -319,6 +337,18 @@ def get_rag_agent(collection_name: str = "default"):
         print(f"[成功] RAG Agent 创建完成: {normalized_name}")
     
     return rag_agents[normalized_name]
+
+
+def get_prompt_chaining_agent():
+    """获取或创建 Prompt Chaining Agent 实例"""
+    global prompt_chaining_agent
+    
+    if prompt_chaining_agent is None:
+        llm_client = GiteeAIClient()
+        prompt_chaining_agent = PromptChainingAgent(llm_client, verbose=False)
+        print("[信息] Prompt Chaining Agent 已创建")
+    
+    return prompt_chaining_agent
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -881,6 +911,222 @@ async def batch_delete_documents(request: BatchDeleteRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量删除失败: {str(e)}")
+
+
+# ========== Prompt Chaining 相关接口 ==========
+
+@app.post("/api/prompt-chaining/run")
+async def run_prompt_chain(request: PromptChainingRequest):
+    """运行提示链（非流式）"""
+    try:
+        agent = get_prompt_chaining_agent()
+        
+        # 根据类型选择对应的链
+        chain_types = {
+            "document_gen": ("文档生成", DocumentGenerationChain.get_steps()),
+            "code_review": ("代码审查", CodeReviewChain.get_steps()),
+            "research": ("研究规划", ResearchPlanningChain.get_steps()),
+            "story": ("故事创作", StoryCreationChain.get_steps()),
+            "product": ("产品分析", ProductAnalysisChain.get_steps())
+        }
+        
+        if request.chain_type not in chain_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的链类型: {request.chain_type}"
+            )
+        
+        chain_name, steps = chain_types[request.chain_type]
+        
+        # 创建并运行链
+        agent.create_chain(request.chain_type, steps)
+        result = agent.run_chain(request.chain_type, request.input_text)
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=500,
+                detail=f"链执行失败: {result.error_message}"
+            )
+        
+        # 可选：保存结果到文件
+        output_file = None
+        if request.save_result:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"prompt_chain_{request.chain_type}_{timestamp}.md"
+            
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(f"# {chain_name}结果\n\n")
+                f.write(f"**输入:** {request.input_text}\n\n")
+                f.write(f"**生成时间:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                f.write("---\n\n")
+                f.write(result.final_output)
+        
+        return {
+            "success": True,
+            "chain_type": request.chain_type,
+            "chain_name": chain_name,
+            "final_output": result.final_output,
+            "total_steps": result.total_steps,
+            "execution_time": result.execution_time,
+            "output_file": output_file,
+            "intermediate_results": [
+                {
+                    "step": r["step"],
+                    "name": r["name"],
+                    "output": r["output"]
+                }
+                for r in result.intermediate_results
+            ]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"执行提示链失败: {str(e)}")
+
+
+@app.post("/api/prompt-chaining/run/stream")
+async def run_prompt_chain_stream(request: PromptChainingRequest):
+    """运行提示链（流式，逐步返回结果）"""
+    
+    async def generate():
+        try:
+            agent = get_prompt_chaining_agent()
+            
+            # 根据类型选择对应的链
+            chain_types = {
+                "document_gen": ("文档生成", DocumentGenerationChain.get_steps()),
+                "code_review": ("代码审查", CodeReviewChain.get_steps()),
+                "research": ("研究规划", ResearchPlanningChain.get_steps()),
+                "story": ("故事创作", StoryCreationChain.get_steps()),
+                "product": ("产品分析", ProductAnalysisChain.get_steps())
+            }
+            
+            if request.chain_type not in chain_types:
+                yield f"data: {json.dumps({'error': f'不支持的链类型: {request.chain_type}', 'done': True}, ensure_ascii=False)}\n\n"
+                return
+            
+            chain_name, steps = chain_types[request.chain_type]
+            
+            # 发送链信息
+            yield f"data: {json.dumps({'type': 'info', 'chain_name': chain_name, 'total_steps': len(steps)}, ensure_ascii=False)}\n\n"
+            
+            # 逐步执行链
+            current_input = request.input_text
+            llm_client = GiteeAIClient()
+            
+            for i, step in enumerate(steps, 1):
+                # 发送步骤开始信号
+                yield f"data: {json.dumps({'type': 'step_start', 'step': i, 'name': step.name, 'description': step.description}, ensure_ascii=False)}\n\n"
+                
+                # 格式化提示词
+                prompt = step.prompt_template.format(input=current_input)
+                
+                # 调用 LLM（流式）
+                full_output = ""
+                stream = llm_client.chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=True
+                )
+                
+                for chunk in stream:
+                    if "choices" in chunk and len(chunk["choices"]) > 0:
+                        delta = chunk["choices"][0].get("delta", {})
+                        content = delta.get("content", "")
+                        
+                        if content:
+                            full_output += content
+                            # 发送内容块
+                            yield f"data: {json.dumps({'type': 'content', 'step': i, 'content': content}, ensure_ascii=False)}\n\n"
+                
+                # 应用转换函数（如果有）
+                if step.transform_fn:
+                    full_output = step.transform_fn(full_output)
+                
+                # 发送步骤完成信号
+                yield f"data: {json.dumps({'type': 'step_complete', 'step': i, 'output': full_output}, ensure_ascii=False)}\n\n"
+                
+                # 下一步的输入是当前步的输出
+                current_input = full_output
+            
+            # 可选：保存结果
+            output_file = None
+            if request.save_result:
+                from datetime import datetime
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_file = f"prompt_chain_{request.chain_type}_{timestamp}.md"
+                
+                with open(output_file, 'w', encoding='utf-8') as f:
+                    f.write(f"# {chain_name}结果\n\n")
+                    f.write(f"**输入:** {request.input_text}\n\n")
+                    f.write(f"**生成时间:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                    f.write("---\n\n")
+                    f.write(current_input)
+            
+            # 发送完成信号
+            yield f"data: {json.dumps({'type': 'done', 'final_output': current_input, 'output_file': output_file}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_msg = f"执行提示链失败: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg, 'done': True}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/prompt-chaining/types")
+async def get_chain_types():
+    """获取所有可用的提示链类型"""
+    return {
+        "chain_types": [
+            {
+                "id": "document_gen",
+                "name": "文档生成",
+                "description": "根据主题自动生成结构化技术文档",
+                "steps": ["生成大纲", "撰写内容", "添加示例", "优化润色"],
+                "input_hint": "请输入文档主题，例如：Python 异步编程入门"
+            },
+            {
+                "id": "code_review",
+                "name": "代码审查",
+                "description": "系统化的代码审查和改进建议",
+                "steps": ["理解代码", "检查问题", "提出建议", "生成报告"],
+                "input_hint": "请粘贴要审查的代码"
+            },
+            {
+                "id": "research",
+                "name": "研究规划",
+                "description": "将研究问题转化为系统化的研究计划",
+                "steps": ["问题分析", "文献综述", "研究方法", "时间规划"],
+                "input_hint": "请输入研究问题，例如：如何提高深度学习模型的训练效率？"
+            },
+            {
+                "id": "story",
+                "name": "故事创作",
+                "description": "创意写作工作流，生成完整故事",
+                "steps": ["构思情节", "角色塑造", "撰写初稿", "润色完善"],
+                "input_hint": "请输入故事主题，例如：时间旅行者的困境"
+            },
+            {
+                "id": "product",
+                "name": "产品分析",
+                "description": "系统化的产品需求分析和规划",
+                "steps": ["需求理解", "功能设计", "技术方案", "实施计划"],
+                "input_hint": "请描述产品需求，例如：一个帮助开发者快速搭建API的工具"
+            }
+        ]
+    }
 
 
 if __name__ == "__main__":
