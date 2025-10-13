@@ -771,7 +771,9 @@
                     <div class="chat-controls">
                         <div class="control-group">
                             <label>知识库：</label>
-                            <input type="text" id="ragCollection" value="default" placeholder="集合名称">
+                            <select id="ragCollection" style="min-width: 200px;">
+                                <option value="">-- 请选择知识库 --</option>
+                            </select>
                         </div>
                         <div class="control-group">
                             <label>检索模式：</label>
@@ -1124,7 +1126,15 @@
             const message = input.value.trim();
             if (!message) return;
 
-            const collection = document.getElementById('ragCollection').value;
+            const select = document.getElementById('ragCollection');
+            const collection = select.value;
+            
+            // 检查是否选择了知识库
+            if (!collection) {
+                alert('请先选择一个知识库！');
+                return;
+            }
+            
             const topK = parseInt(document.getElementById('topK').value);
             const optimizeQuery = document.getElementById('optimizeQuery').checked;
             const useHistory = document.getElementById('useHistory').checked;
@@ -1466,7 +1476,13 @@
         async function clearRagHistory() {
             if (!confirm('确定要清除 RAG 对话历史吗？')) return;
 
-            const collection = document.getElementById('ragCollection').value;
+            const select = document.getElementById('ragCollection');
+            const collection = select.value;
+            
+            if (!collection) {
+                alert('请先选择一个知识库！');
+                return;
+            }
             
             try {
                 await fetch(`${API_BASE}/api/rag/history/${collection}/default`, { method: 'DELETE' });
@@ -1801,6 +1817,7 @@
         // 更新所有下拉选择框
         function updateCollectionSelects(collections) {
             const selects = [
+                document.getElementById('ragCollection'),
                 document.getElementById('infoCollection'),
                 document.getElementById('browserCollection')
             ];
@@ -1836,9 +1853,11 @@
             syncCollectionName(collectionName);
             
             // 同时更新下拉选择框的值
+            const ragSelect = document.getElementById('ragCollection');
             const infoSelect = document.getElementById('infoCollection');
             const browserSelect = document.getElementById('browserCollection');
             
+            if (ragSelect) ragSelect.value = collectionName;
             if (infoSelect) infoSelect.value = collectionName;
             if (browserSelect) browserSelect.value = collectionName;
             
