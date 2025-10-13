@@ -13,6 +13,85 @@
 - 性能监控和日志
 - 用户认证功能
 
+## [0.3.0] - 2025-10-13
+
+### 重大更新 - 项目整理与优化
+
+#### 📝 文档优化
+- ✨ 全新的 README.md，结构更清晰，内容更完整
+- 📚 创建文档中心 (docs/README.md)，提供完整文档导航
+- 🚀 新增 QUICKSTART.md 快速开始指南
+- 🗑️ 删除30+个重复和过时的修复文档
+- 📖 保留核心文档，移除冗余内容
+
+#### 🧹 代码清理
+- 🗑️ 删除20+个临时测试和诊断脚本
+- 🗑️ 删除重复的配置示例文件
+- 🗑️ 删除过时的工具脚本（fix_database_permissions.sh等）
+- ✅ 保留核心功能代码和必要工具
+
+#### ⚙️ 配置优化
+- 📝 更新 env.example，添加完整的 RAG 配置说明
+- 📝 添加模型分配配置说明
+- 📝 统一配置文件，只保留 env.example
+
+#### 🎯 项目结构
+- 清理前：80+ 文件（大量重复文档和脚本）
+- 清理后：精简到核心文件，结构更清晰
+- 文档：从50个降到10个核心文档
+- 脚本：只保留必要的启动脚本
+
+### 删除的文件清单
+**重复文档（34个）：**
+- 🚀请先阅读我.md, START_HERE.md, QUICK_START.md 等快速开始文档
+- SSL_FIX_*.md, 云端API优化说明.md 等修复文档
+- DATABASE_*.md, KNOWLEDGE_BASE_*.md 等功能修复文档
+- *_SUMMARY.md, *_FIX.md 等总结文档
+
+**测试脚本（15个）：**
+- test_*.py 系列测试脚本
+- diagnose_*.py 诊断脚本
+- verify_*.sh, *_fix.sh 验证和修复脚本
+- migrate_*.py, show_*.py 迁移和展示脚本
+
+**配置文件（3个）：**
+- env_example.txt, env_config_example.txt
+- knowledge_base_mappings.json
+
+**启动脚本（2个）：**
+- run_web_fixed.py, run_web_optimized.py
+
+**文档（2个）：**
+- docs/PROJECT_OVERVIEW.md, docs/pycharm_setup.md
+
+### 保留的核心文件
+**文档（10个）：**
+- README.md - 主文档（全新）
+- QUICKSTART.md - 快速开始（新增）
+- CHANGELOG.md - 更新日志
+- CONTRIBUTING.md - 贡献指南
+- LICENSE - 许可证
+- docs/*.md - 核心技术文档（10个）
+
+**启动脚本（2个）：**
+- run_web.py - 标准启动
+- run_web_auto.py - 自动启动
+
+**配置（1个）：**
+- env.example - 配置示例
+
+**代码：**
+- src/ - 核心代码
+- examples/ - 示例代码
+- tests/ - 测试代码
+
+### 影响
+- ✅ 项目结构更清晰
+- ✅ 文档更易查找和使用
+- ✅ 减少维护负担
+- ✅ 新用户更容易上手
+- ✅ 代码库更精简
+
 ## [0.2.0] - 2025-10-10
 
 ### 新增
