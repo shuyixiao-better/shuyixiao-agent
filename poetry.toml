@@ -1,7 +1,3 @@
 [virtualenvs]
 in-project = true
 
-[[tool.poetry.source]]
-name = "aliyun"
-url = "https://mirrors.aliyun.com/pypi/simple/"
-default = true
