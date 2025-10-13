@@ -106,12 +106,42 @@ CLOUD_RERANKER_MODEL=bge-reranker-base
 
 ### 3. 启动 Web 界面（推荐）
 
+#### 方式 1：自动启动（推荐）⭐
+
+使用自动化启动脚本，会自动检测并使用可用端口：
+
+```bash
+# 激活虚拟环境（如果使用）
+.venv\Scripts\Activate.ps1  # Windows PowerShell
+# 或 source .venv/bin/activate  # Linux/Mac
+
+# 启动 Web 服务（自动查找可用端口）
+python run_web_auto.py
+
+# 服务启动后，浏览器访问显示的地址
+# 例如：http://localhost:8001
+```
+
+#### 方式 2：标准启动
+
 ```bash
 # 启动 Web 服务
 python run_web.py
 
 # 在浏览器中打开
 # http://localhost:8000
+```
+
+#### 方式 3：修复版启动（遇到问题时使用）
+
+```bash
+# 带诊断功能的启动脚本
+python run_web_fixed.py
+
+# 会自动检查：
+# - 依赖包是否完整
+# - 端口是否被占用
+# - 配置是否正确
 ```
 
 Web 界面提供了友好的聊天界面，支持：
@@ -122,6 +152,24 @@ Web 界面提供了友好的聊天界面，支持：
 - ✅ **一键清除**：清空所有对话历史
 - ✅ **现代化 UI**：美观的渐变设计，流畅动画
 - ✅ **打字指示器**：显示 AI 正在思考的状态
+
+#### 🔧 诊断工具
+
+如果启动遇到问题，可以使用诊断脚本：
+
+```bash
+# 运行完整诊断
+python diagnose_web_issue.py
+
+# 检查内容：
+# ✓ Python 版本
+# ✓ 虚拟环境状态
+# ✓ 依赖包完整性
+# ✓ 项目结构
+# ✓ 环境配置
+# ✓ 端口占用情况
+# ✓ 应用导入测试
+```
 
 ### 4. 或运行命令行示例
 
@@ -210,7 +258,12 @@ shuyixiao-agent/
 │   └── rag_guide.md              # RAG 使用指南
 ├── data/                          # 数据目录（自动创建）
 │   └── chroma/                    # 向量数据库
-├── run_web.py                     # Web 服务启动脚本
+├── run_web.py                     # Web 服务启动脚本（标准版）
+├── run_web_auto.py                # Web 服务启动脚本（自动化版）⭐
+├── run_web_fixed.py               # Web 服务启动脚本（修复版）
+├── run_web_optimized.py           # Web 服务启动脚本（优化版）
+├── diagnose_web_issue.py          # Web 服务器诊断工具
+├── test_server.py                 # 服务器连接测试脚本
 ├── .env.example                   # 环境变量示例
 ├── pyproject.toml                 # 项目配置
 └── README.md                      # 本文件
@@ -476,20 +529,88 @@ Web 服务提供以下 API：
 
 ### 故障排除
 
-**问题：流式输出不工作**
+#### 常见启动问题
+
+**问题 1：浏览器无法访问 localhost:8000** ❌
+
+**原因：** 端口被占用或依赖缺失
+
+**解决方案：**
+```bash
+# 方案 A：使用自动化启动脚本（推荐）
+python run_web_auto.py
+# 会自动查找可用端口（8001, 8002...）
+
+# 方案 B：运行诊断工具
+python diagnose_web_issue.py
+# 会检查所有问题并给出建议
+
+# 方案 C：手动清理端口
+netstat -ano | findstr :8000  # 查找占用进程
+taskkill /PID <PID> /F         # 结束进程
+```
+
+**问题 2：缺少依赖包** ❌
+
+**症状：** `ModuleNotFoundError: No module named 'xxx'`
+
+**解决方案：**
+```bash
+# 激活虚拟环境
+.venv\Scripts\Activate.ps1  # Windows
+source .venv/bin/activate   # Linux/Mac
+
+# 安装依赖
+pip install -r requirements.txt
+# 或使用 Poetry
+poetry install
+```
+
+**问题 3：API Key 未配置** ⚠️
+
+**症状：** 启动日志显示 `API Key 已配置: False`
+
+**解决方案：**
+```bash
+# 1. 复制环境变量示例文件
+cp env.example .env
+
+# 2. 编辑 .env 文件，添加：
+# GITEE_AI_API_KEY=你的API密钥
+
+# 3. 获取 API Key
+# https://ai.gitee.com/dashboard/settings/tokens
+```
+
+**问题 4：流式输出不工作**
 - 确保已重启服务
 - 清除浏览器缓存（Ctrl+F5）
 - 检查控制台错误（F12）
 
-**问题：工具调用失败**
+**问题 5：工具调用失败**
 - 确保选择了"工具调用"模式
 - 查看后端日志
 - 验证工具函数是否正确注册
 
-**问题：Markdown 不渲染**
+**问题 6：Markdown 不渲染**
 - 强制刷新浏览器（Ctrl+F5）
 - 检查 marked.js 和 DOMPurify 库是否加载
 - 在控制台输入 `typeof marked` 检查
+
+#### 🛠️ 诊断工具说明
+
+项目提供了三个诊断和启动工具：
+
+| 工具 | 用途 | 特点 |
+|------|------|------|
+| `run_web_auto.py` | 自动化启动 | ⭐ **推荐**，自动查找可用端口，无需交互 |
+| `run_web_fixed.py` | 修复版启动 | 带完整诊断，交互式选择端口 |
+| `diagnose_web_issue.py` | 诊断工具 | 全面检查系统状态，给出修复建议 |
+
+**使用场景：**
+- **首次启动**：使用 `run_web_auto.py`
+- **遇到问题**：先运行 `diagnose_web_issue.py`，再用 `run_web_fixed.py`
+- **日常使用**：使用 `run_web_auto.py` 或 `run_web.py`
 
 ## 📚 文档
 
