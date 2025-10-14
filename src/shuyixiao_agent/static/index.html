@@ -732,6 +732,7 @@
             <button class="tab" onclick="switchTab('prompting')">🔗 Prompt Chaining</button>
             <button class="tab" onclick="switchTab('routing')">🎯 Routing Agent</button>
             <button class="tab" onclick="switchTab('parallelization')">🚀 Parallelization Agent</button>
+            <button class="tab" onclick="switchTab('reflection')">💭 Reflection Agent</button>
         </div>
 
         <div class="content">
@@ -1246,6 +1247,174 @@
                             </button>
                             <button class="btn btn-secondary" onclick="downloadChainResult()">
                                 💾 下载结果
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reflection Agent 标签页 -->
+            <div id="reflectionTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>💭 Reflection Agent - 反思智能体</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            通过自我批判和迭代改进来提升输出质量。系统先生成初始响应，然后进行反思，基于反思进行改进，可进行多轮迭代直到达到质量要求。
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>选择场景：</label>
+                                <select id="reflectionScenario" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateReflectionScenarioInfo()">
+                                    <option value="">-- 请选择一个场景 --</option>
+                                    <option value="content">📝 内容创作 - 文章、博客、报告</option>
+                                    <option value="code">💻 代码优化 - 代码质量提升</option>
+                                    <option value="analysis">📊 分析报告 - 数据分析和洞察</option>
+                                    <option value="translation">🌍 翻译优化 - 翻译质量改进</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>反思策略：</label>
+                                <select id="reflectionStrategy" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateReflectionStrategyInfo()">
+                                    <option value="simple">💡 简单反思 - 单一批评者</option>
+                                    <option value="multi_aspect" selected>🎯 多维度反思（推荐）- 全面评估</option>
+                                    <option value="debate">⚖️ 辩论式反思 - 正反两方</option>
+                                    <option value="expert">👨‍🔬 专家反思 - 领域专家评估</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 场景信息 -->
+                        <div id="reflectionScenarioInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">场景信息</h4>
+                            <div id="reflectionDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="reflectionCriteria" style="margin-bottom: 12px;"></div>
+                            <div id="reflectionHint" style="font-size: 13px; color: #6c757d; font-style: italic;"></div>
+                        </div>
+
+                        <!-- 专家设置（仅在expert策略时显示） -->
+                        <div id="expertSettings" style="display: none; background: #fff3cd; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                            <h4 style="margin-bottom: 12px; color: #856404;">👨‍🔬 专家设置</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="color: #856404;">专家角色：</label>
+                                    <input type="text" id="expertRole" placeholder="例如：资深Python开发工程师" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="color: #856404;">专业领域：</label>
+                                    <input type="text" id="expertExpertise" placeholder="例如：10年Python和架构设计经验" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 高级设置 -->
+                        <div style="background: #e7f5ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #0c63e4;">
+                            <h4 style="margin-bottom: 12px; color: #084298;">⚙️ 高级设置</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="color: #084298;">最大迭代次数：</label>
+                                    <input type="number" id="maxIterations" value="3" min="1" max="10" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label style="color: #084298;">质量阈值（0.0-1.0）：</label>
+                                    <input type="number" id="scoreThreshold" value="0.85" min="0" max="1" step="0.05" style="width: 100%; padding: 10px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px;">
+                                </div>
+                            </div>
+                            <p style="margin-top: 8px; font-size: 12px; color: #6c757d;">达到质量阈值后将自动停止迭代</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="reflectionInputLabel">任务描述或初始内容：</label>
+                            <textarea id="reflectionInput" placeholder="请先选择一个场景..." rows="8" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                            <p style="margin-top: 8px; font-size: 12px; color: #6c757d;">💡 提示：如果输入的是任务描述，系统会先生成初始内容再进行反思；如果输入的是已有内容，系统会直接对其进行反思和改进。</p>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="executeReflection()" id="reflectionExecuteBtn" style="flex: 1;">
+                                <span>💭 开始反思与改进</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearReflectionResult()">
+                                🗑️ 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 执行进度 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="reflectionProgressCard">
+                        <h3>⏳ 反思进度</h3>
+                        <div id="reflectionProgressInfo" style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span id="reflectionProgressText" style="font-size: 14px; color: #495057;">正在执行反思...</span>
+                                <span id="reflectionIterationCount" style="font-size: 13px; color: #6c757d;">第 0 轮</span>
+                            </div>
+                            <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="reflectionProgressBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 当前步骤 -->
+                        <div id="reflectionCurrentStep" style="background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #667eea;">
+                            <h4 style="margin-bottom: 8px; color: #495057;">当前步骤</h4>
+                            <p id="reflectionStepMessage" style="margin: 0; color: #6c757d;">准备开始...</p>
+                        </div>
+                    </div>
+
+                    <!-- 反思历史 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="reflectionHistoryCard">
+                        <h3>📜 反思历史</h3>
+                        <div id="reflectionHistory" style="display: flex; flex-direction: column; gap: 16px;"></div>
+                    </div>
+
+                    <!-- 最终结果 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="reflectionResultCard">
+                        <h3>✨ 最终结果</h3>
+                        
+                        <!-- 质量提升统计 -->
+                        <div id="reflectionStats" style="background: #d1f4e0; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #28a745;">
+                            <div style="display: flex; justify-content: space-around; text-align: center;">
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 600; color: #155724;" id="finalScore">0.00</div>
+                                    <div style="font-size: 13px; color: #6c757d;">最终评分</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 600; color: #155724;" id="totalIterations">0</div>
+                                    <div style="font-size: 13px; color: #6c757d;">迭代次数</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 600; color: #155724;" id="scoreImprovement">+0.00</div>
+                                    <div style="font-size: 13px; color: #6c757d;">质量提升</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 24px; font-weight: 600; color: #155724;" id="reflectionTime">0.0s</div>
+                                    <div style="font-size: 13px; color: #6c757d;">总耗时</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 最终内容 -->
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">📝 优化后的内容</h4>
+                            <div id="reflectionFinalContent" class="markdown-content"></div>
+                        </div>
+
+                        <!-- 改进总结 -->
+                        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #856404;">💡 改进总结</h4>
+                            <div id="reflectionSummary" class="markdown-content"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="copyReflectionResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadReflectionResult()">
+                                💾 下载结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="showReflectionHistory()">
+                                📜 查看完整历史
                             </button>
                         </div>
                     </div>
@@ -3214,6 +3383,354 @@
             
             console.log('已下载结果到:', filename);
         }
+
+        // ==================== Reflection Agent 相关函数 ====================
+
+        let reflectionScenarios = [];
+        let reflectionHistory = [];
+
+        // 加载反思场景
+        async function loadReflectionScenarios() {
+            try {
+                const response = await fetch(`${API_BASE}/api/reflection/scenarios`);
+                const data = await response.json();
+                reflectionScenarios = data.scenarios;
+            } catch (error) {
+                console.error('加载反思场景失败:', error);
+            }
+        }
+
+        // 更新反思场景信息
+        function updateReflectionScenarioInfo() {
+            const scenario = document.getElementById('reflectionScenario').value;
+            const info = reflectionScenarios.find(s => s.id === scenario);
+            
+            if (info) {
+                document.getElementById('reflectionScenarioInfo').style.display = 'block';
+                document.getElementById('reflectionDescription').textContent = info.description;
+                document.getElementById('reflectionHint').textContent = '💡 ' + info.input_hint;
+                
+                // 显示反思标准
+                const criteriaHtml = '<strong>评估标准：</strong>' + info.criteria.map(c => `<span style="display: inline-block; background: #e7f5ff; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 12px;">${c}</span>`).join('');
+                document.getElementById('reflectionCriteria').innerHTML = criteriaHtml;
+                
+                document.getElementById('reflectionInput').placeholder = info.input_hint;
+            } else {
+                document.getElementById('reflectionScenarioInfo').style.display = 'none';
+                document.getElementById('reflectionInput').placeholder = '请先选择一个场景...';
+            }
+        }
+
+        // 更新反思策略信息（显示/隐藏专家设置）
+        function updateReflectionStrategyInfo() {
+            const strategy = document.getElementById('reflectionStrategy').value;
+            const expertSettings = document.getElementById('expertSettings');
+            
+            if (strategy === 'expert') {
+                expertSettings.style.display = 'block';
+            } else {
+                expertSettings.style.display = 'none';
+            }
+        }
+
+        // 执行反思
+        async function executeReflection() {
+            const scenario = document.getElementById('reflectionScenario').value;
+            const strategy = document.getElementById('reflectionStrategy').value;
+            const input = document.getElementById('reflectionInput').value.trim();
+            const maxIterations = parseInt(document.getElementById('maxIterations').value);
+            const scoreThreshold = parseFloat(document.getElementById('scoreThreshold').value);
+            
+            if (!scenario) {
+                alert('请先选择一个场景');
+                return;
+            }
+            
+            if (!input) {
+                alert('请输入任务描述或初始内容');
+                return;
+            }
+            
+            const btn = document.getElementById('reflectionExecuteBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 正在执行反思...</span>';
+            
+            // 显示进度卡片
+            document.getElementById('reflectionProgressCard').style.display = 'block';
+            document.getElementById('reflectionHistoryCard').style.display = 'none';
+            document.getElementById('reflectionResultCard').style.display = 'none';
+            
+            reflectionHistory = [];
+            let initialScore = 0;
+            
+            try {
+                // 准备请求数据
+                const requestData = {
+                    task: input,
+                    scenario: scenario,
+                    strategy: strategy,
+                    max_iterations: maxIterations,
+                    score_threshold: scoreThreshold
+                };
+                
+                // 如果是专家策略，添加专家信息
+                if (strategy === 'expert') {
+                    const expertRole = document.getElementById('expertRole').value.trim();
+                    const expertExpertise = document.getElementById('expertExpertise').value.trim();
+                    if (expertRole) requestData.expert_role = expertRole;
+                    if (expertExpertise) requestData.expert_expertise = expertExpertise;
+                }
+                
+                // 使用流式API
+                const response = await fetch(`${API_BASE}/api/reflection/reflect/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            
+                            if (data.type === 'info') {
+                                document.getElementById('reflectionProgressText').textContent = 
+                                    `最大迭代次数: ${data.max_iterations}, 策略: ${data.strategy}`;
+                            } else if (data.type === 'generating') {
+                                document.getElementById('reflectionStepMessage').textContent = data.message;
+                            } else if (data.type === 'initial_content') {
+                                document.getElementById('reflectionStepMessage').innerHTML = 
+                                    `<strong>初始内容已生成</strong><br><div style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; max-height: 200px; overflow-y: auto;">${data.content.substring(0, 300)}...</div>`;
+                            } else if (data.type === 'iteration_start') {
+                                document.getElementById('reflectionIterationCount').textContent = `第 ${data.iteration} 轮`;
+                                document.getElementById('reflectionProgressBar').style.width = 
+                                    `${(data.iteration / maxIterations) * 100}%`;
+                                document.getElementById('reflectionStepMessage').textContent = 
+                                    `正在进行第 ${data.iteration} 轮反思...`;
+                            } else if (data.type === 'reflection') {
+                                // 记录历史
+                                reflectionHistory.push({
+                                    iteration: data.iteration,
+                                    critique: data.critique,
+                                    score: data.score,
+                                    improvements: data.improvements
+                                });
+                                
+                                if (data.iteration === 1) {
+                                    initialScore = data.score;
+                                }
+                                
+                                // 确保critique是字符串
+                                const critiqueText = typeof data.critique === 'string' ? data.critique : JSON.stringify(data.critique);
+                                const critiquePreview = critiqueText.length > 200 ? critiqueText.substring(0, 200) + '...' : critiqueText;
+                                
+                                // 更新进度信息
+                                document.getElementById('reflectionStepMessage').innerHTML = 
+                                    `<strong>第 ${data.iteration} 轮反思完成</strong><br>` +
+                                    `评分: <strong>${data.score.toFixed(2)}</strong><br>` +
+                                    `<div style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px;">${critiquePreview}</div>`;
+                                
+                                // 显示反思历史
+                                displayReflectionHistory();
+                            } else if (data.type === 'threshold_reached') {
+                                document.getElementById('reflectionStepMessage').innerHTML = 
+                                    `<strong style="color: #28a745;">✅ 已达到质量阈值！</strong><br>` +
+                                    `评分 ${data.score.toFixed(2)} >= ${data.threshold}`;
+                            } else if (data.type === 'improving') {
+                                document.getElementById('reflectionStepMessage').textContent = data.message;
+                            } else if (data.type === 'improved_content') {
+                                document.getElementById('reflectionStepMessage').innerHTML = 
+                                    `<strong>第 ${data.iteration} 轮改进完成</strong><br>` +
+                                    `<div style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; max-height: 200px; overflow-y: auto;">${data.content.substring(0, 300)}...</div>`;
+                            } else if (data.type === 'done') {
+                                // 显示最终结果
+                                displayReflectionResult(data, initialScore);
+                                
+                                // 隐藏进度卡片
+                                document.getElementById('reflectionProgressCard').style.display = 'none';
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('反思执行失败:', error);
+                alert('反思执行失败: ' + error.message);
+                document.getElementById('reflectionProgressCard').style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>💭 开始反思与改进</span>';
+            }
+        }
+
+        // 显示反思历史
+        function displayReflectionHistory() {
+            const historyDiv = document.getElementById('reflectionHistory');
+            historyDiv.innerHTML = '';
+            
+            reflectionHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.style.cssText = 'background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid #667eea;';
+                
+                // 确保improvements是数组
+                const improvements = Array.isArray(item.improvements) ? item.improvements : [];
+                const improvementsHtml = improvements.map(imp => 
+                    `<li style="margin: 4px 0;">${imp}</li>`
+                ).join('');
+                
+                // 确保critique是字符串
+                const critiqueText = typeof item.critique === 'string' ? item.critique : JSON.stringify(item.critique);
+                
+                historyItem.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <h4 style="margin: 0; color: #495057;">第 ${item.iteration} 轮反思</h4>
+                        <span style="background: ${item.score >= 0.8 ? '#d1f4e0' : item.score >= 0.6 ? '#fff3cd' : '#f8d7da'}; 
+                                     color: ${item.score >= 0.8 ? '#155724' : item.score >= 0.6 ? '#856404' : '#721c24'}; 
+                                     padding: 4px 12px; border-radius: 12px; font-weight: 600;">
+                            ${item.score.toFixed(2)}
+                        </span>
+                    </div>
+                    <div style="margin: 12px 0; color: #6c757d;">${critiqueText}</div>
+                    <div style="margin-top: 12px;">
+                        <strong style="color: #495057;">改进建议：</strong>
+                        <ul style="margin: 8px 0; padding-left: 24px; color: #6c757d;">${improvementsHtml}</ul>
+                    </div>
+                `;
+                
+                historyDiv.appendChild(historyItem);
+            });
+            
+            document.getElementById('reflectionHistoryCard').style.display = 'block';
+        }
+
+        // 显示反思结果
+        function displayReflectionResult(data, initialScore) {
+            // 统计信息
+            document.getElementById('finalScore').textContent = data.final_score.toFixed(2);
+            document.getElementById('totalIterations').textContent = data.total_iterations;
+            const improvement = data.final_score - initialScore;
+            document.getElementById('scoreImprovement').textContent = 
+                (improvement >= 0 ? '+' : '') + improvement.toFixed(2);
+            document.getElementById('reflectionTime').textContent = data.total_iterations + '轮';
+            
+            // 最终内容
+            if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                const rawHtml = marked.parse(data.final_content);
+                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                document.getElementById('reflectionFinalContent').innerHTML = cleanHtml;
+            } else {
+                document.getElementById('reflectionFinalContent').textContent = data.final_content;
+            }
+            
+            // 改进总结
+            if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                const rawHtml = marked.parse(data.improvement_summary);
+                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                document.getElementById('reflectionSummary').innerHTML = cleanHtml;
+            } else {
+                document.getElementById('reflectionSummary').textContent = data.improvement_summary;
+            }
+            
+            // 显示结果卡片
+            document.getElementById('reflectionResultCard').style.display = 'block';
+        }
+
+        // 清除反思结果
+        function clearReflectionResult() {
+            reflectionHistory = [];
+            document.getElementById('reflectionProgressCard').style.display = 'none';
+            document.getElementById('reflectionHistoryCard').style.display = 'none';
+            document.getElementById('reflectionResultCard').style.display = 'none';
+            document.getElementById('reflectionProgressBar').style.width = '0%';
+        }
+
+        // 复制反思结果
+        function copyReflectionResult() {
+            const content = document.getElementById('reflectionFinalContent').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('结果已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        // 下载反思结果
+        function downloadReflectionResult() {
+            const content = document.getElementById('reflectionFinalContent').textContent;
+            const summary = document.getElementById('reflectionSummary').textContent;
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `reflection_result_${timestamp}.md`;
+            
+            let fullContent = `# Reflection Agent 反思结果\n\n`;
+            fullContent += `**生成时间**: ${new Date().toLocaleString('zh-CN')}\n\n`;
+            fullContent += `---\n\n`;
+            fullContent += `## 最终内容\n\n${content}\n\n`;
+            fullContent += `---\n\n`;
+            fullContent += `## 改进总结\n\n${summary}\n\n`;
+            fullContent += `---\n\n`;
+            fullContent += `## 反思历史\n\n`;
+            
+            reflectionHistory.forEach(item => {
+                fullContent += `### 第 ${item.iteration} 轮 (评分: ${item.score.toFixed(2)})\n\n`;
+                fullContent += `**批评**: ${item.critique}\n\n`;
+                fullContent += `**改进建议**:\n`;
+                item.improvements.forEach(imp => {
+                    fullContent += `- ${imp}\n`;
+                });
+                fullContent += `\n`;
+            });
+            
+            const blob = new Blob([fullContent], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('已下载反思结果到:', filename);
+        }
+
+        // 显示完整反思历史
+        function showReflectionHistory() {
+            const card = document.getElementById('reflectionHistoryCard');
+            if (card.style.display === 'none') {
+                card.style.display = 'block';
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // 页面加载时初始化
+        (function() {
+            const originalInit = window.onload;
+            window.onload = function() {
+                if (originalInit) originalInit();
+                loadReflectionScenarios();
+            };
+        })();
     </script>
 </body>
 </html>

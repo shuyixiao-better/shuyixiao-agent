@@ -45,6 +45,15 @@ from .agents.parallelization_agent import (
     ParallelResearch,
     ConsensusGenerator
 )
+from .agents.reflection_agent import (
+    ReflectionAgent,
+    ReflectionStrategy,
+    ReflectionCriteria,
+    ContentReflection,
+    CodeReflection,
+    AnalysisReflection,
+    TranslationReflection
+)
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
@@ -178,6 +187,9 @@ routing_agents: Dict[str, RoutingAgent] = {}
 
 # Parallelization Agent 实例缓存
 parallelization_agent: Optional[ParallelizationAgent] = None
+
+# Reflection Agent 实例缓存
+reflection_agent: Optional[ReflectionAgent] = None
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
@@ -333,6 +345,18 @@ class ParallelizationRequest(BaseModel):
     max_workers: int = 5
 
 
+class ReflectionRequest(BaseModel):
+    """Reflection 请求模型"""
+    task: str
+    initial_content: Optional[str] = None
+    strategy: str = "simple"  # simple, multi_aspect, debate, expert
+    scenario: Optional[str] = None  # content, code, analysis, translation
+    max_iterations: int = 3
+    score_threshold: float = 0.85
+    expert_role: Optional[str] = None  # 用于 expert 策略
+    expert_expertise: Optional[str] = None  # 用于 expert 策略
+
+
 def get_agent(agent_type: str, system_message: Optional[str] = None):
     """获取或创建 Agent 实例"""
     cache_key = f"{agent_type}_{system_message or 'default'}"
@@ -438,6 +462,25 @@ def get_parallelization_agent(max_workers: int = 5):
         print(f"[信息] Parallelization Agent 已创建 (max_workers={max_workers})")
     
     return parallelization_agent
+
+
+def get_reflection_agent(max_iterations: int = 3, score_threshold: float = 0.85):
+    """获取或创建 Reflection Agent 实例"""
+    global reflection_agent
+    
+    if (reflection_agent is None or 
+        reflection_agent.max_iterations != max_iterations or
+        reflection_agent.score_threshold != score_threshold):
+        llm_client = GiteeAIClient()
+        reflection_agent = ReflectionAgent(
+            llm_client=llm_client,
+            max_iterations=max_iterations,
+            score_threshold=score_threshold,
+            verbose=False
+        )
+        print(f"[信息] Reflection Agent 已创建 (max_iterations={max_iterations}, threshold={score_threshold})")
+    
+    return reflection_agent
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1691,6 +1734,276 @@ async def get_parallelization_scenarios():
                 "description": "使用LLM寻找共识"
             }
         ]
+    }
+
+
+# ========== Reflection Agent 相关接口 ==========
+
+@app.post("/api/reflection/reflect")
+async def reflect_and_improve(request: ReflectionRequest):
+    """执行反思和改进（非流式）"""
+    try:
+        agent = get_reflection_agent(
+            max_iterations=request.max_iterations,
+            score_threshold=request.score_threshold
+        )
+        
+        # 根据场景选择标准
+        criteria = None
+        context = {}
+        
+        if request.scenario == "content":
+            criteria = ContentReflection.get_criteria()
+        elif request.scenario == "code":
+            criteria = CodeReflection.get_criteria()
+        elif request.scenario == "analysis":
+            criteria = AnalysisReflection.get_criteria()
+        elif request.scenario == "translation":
+            criteria = TranslationReflection.get_criteria()
+        
+        # 设置专家上下文
+        if request.strategy == "expert":
+            if request.expert_role:
+                context['expert_role'] = request.expert_role
+            if request.expert_expertise:
+                context['expert_expertise'] = request.expert_expertise
+        
+        # 执行反思
+        result = agent.reflect_and_improve(
+            task=request.task,
+            initial_content=request.initial_content,
+            strategy=ReflectionStrategy(request.strategy),
+            criteria=criteria,
+            context=context
+        )
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=500,
+                detail=f"反思过程失败: {result.error_message}"
+            )
+        
+        return {
+            "success": True,
+            "final_content": result.final_content,
+            "total_iterations": result.total_iterations,
+            "final_score": result.final_score,
+            "improvement_summary": result.improvement_summary,
+            "total_time": result.total_time,
+            "reflection_history": [
+                {
+                    "iteration": r.iteration,
+                    "score": r.score,
+                    "critique": r.critique,
+                    "improvements": r.improvements,
+                    "timestamp": r.timestamp
+                }
+                for r in result.reflection_history
+            ]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"执行反思失败: {str(e)}")
+
+
+@app.post("/api/reflection/reflect/stream")
+async def reflect_and_improve_stream(request: ReflectionRequest):
+    """执行反思和改进（流式，实时返回每轮迭代）"""
+    
+    async def generate():
+        from datetime import datetime as dt_now
+        
+        try:
+            agent = get_reflection_agent(
+                max_iterations=request.max_iterations,
+                score_threshold=request.score_threshold
+            )
+            
+            # 根据场景选择标准
+            criteria = None
+            context = {}
+            
+            if request.scenario == "content":
+                criteria = ContentReflection.get_criteria()
+            elif request.scenario == "code":
+                criteria = CodeReflection.get_criteria()
+            elif request.scenario == "analysis":
+                criteria = AnalysisReflection.get_criteria()
+            elif request.scenario == "translation":
+                criteria = TranslationReflection.get_criteria()
+            
+            # 设置专家上下文
+            if request.strategy == "expert":
+                if request.expert_role:
+                    context['expert_role'] = request.expert_role
+                if request.expert_expertise:
+                    context['expert_expertise'] = request.expert_expertise
+            
+            # 发送初始信息
+            yield f"data: {json.dumps({'type': 'info', 'max_iterations': request.max_iterations, 'strategy': request.strategy}, ensure_ascii=False)}\n\n"
+            
+            # 1. 生成初始内容（如果没有提供）
+            if request.initial_content is None:
+                yield f"data: {json.dumps({'type': 'generating', 'message': '正在生成初始内容...'}, ensure_ascii=False)}\n\n"
+                
+                initial_content = agent._generate_initial_content(request.task, context)
+                
+                yield f"data: {json.dumps({'type': 'initial_content', 'content': initial_content}, ensure_ascii=False)}\n\n"
+            else:
+                initial_content = request.initial_content
+                yield f"data: {json.dumps({'type': 'initial_content', 'content': initial_content}, ensure_ascii=False)}\n\n"
+            
+            current_content = initial_content
+            reflection_history = []
+            
+            # 2. 迭代反思和改进
+            for iteration in range(1, request.max_iterations + 1):
+                # 发送迭代开始信号
+                yield f"data: {json.dumps({'type': 'iteration_start', 'iteration': iteration}, ensure_ascii=False)}\n\n"
+                
+                # 执行反思
+                critique, score, improvements = agent._reflect(
+                    content=current_content,
+                    task=request.task,
+                    strategy=ReflectionStrategy(request.strategy),
+                    criteria=criteria,
+                    context=context
+                )
+                
+                # 发送反思结果
+                yield f"data: {json.dumps({'type': 'reflection', 'iteration': iteration, 'critique': critique, 'score': score, 'improvements': improvements}, ensure_ascii=False)}\n\n"
+                
+                # 记录历史
+                reflection_result = {
+                    "iteration": iteration,
+                    "content": current_content,
+                    "critique": critique,
+                    "score": score,
+                    "improvements": improvements,
+                    "timestamp": dt_now.now().isoformat()
+                }
+                reflection_history.append(reflection_result)
+                
+                # 检查是否达到质量阈值
+                if score >= request.score_threshold:
+                    yield f"data: {json.dumps({'type': 'threshold_reached', 'score': score, 'threshold': request.score_threshold}, ensure_ascii=False)}\n\n"
+                    break
+                
+                # 如果不是最后一轮，进行改进
+                if iteration < request.max_iterations:
+                    yield f"data: {json.dumps({'type': 'improving', 'message': '正在改进内容...'}, ensure_ascii=False)}\n\n"
+                    
+                    current_content = agent._improve(
+                        content=current_content,
+                        critique=critique,
+                        improvements=improvements,
+                        task=request.task,
+                        context=context
+                    )
+                    
+                    yield f"data: {json.dumps({'type': 'improved_content', 'iteration': iteration, 'content': current_content}, ensure_ascii=False)}\n\n"
+            
+            # 3. 生成改进总结
+            from src.shuyixiao_agent.agents.reflection_agent import ReflectionResult
+            
+            history_objects = [
+                ReflectionResult(
+                    iteration=r['iteration'],
+                    content=r['content'],
+                    critique=r['critique'],
+                    score=r['score'],
+                    improvements=r['improvements'],
+                    timestamp=r['timestamp']
+                )
+                for r in reflection_history
+            ]
+            
+            improvement_summary = agent._generate_improvement_summary(history_objects, request.task)
+            
+            # 发送完成信号
+            yield f"data: {json.dumps({'type': 'done', 'final_content': current_content, 'final_score': reflection_history[-1]['score'], 'improvement_summary': improvement_summary, 'total_iterations': len(reflection_history)}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_msg = f"执行反思失败: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg, 'done': True}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/reflection/scenarios")
+async def get_reflection_scenarios():
+    """获取所有可用的反思场景"""
+    return {
+        "scenarios": [
+            {
+                "id": "content",
+                "name": "内容创作",
+                "description": "对文章、博客、报告等内容进行反思和改进",
+                "criteria": [c.name for c in ContentReflection.get_criteria()],
+                "input_hint": "请输入要改进的任务描述或内容"
+            },
+            {
+                "id": "code",
+                "name": "代码优化",
+                "description": "对代码进行反思和优化",
+                "criteria": [c.name for c in CodeReflection.get_criteria()],
+                "input_hint": "请输入代码编写任务或粘贴要优化的代码"
+            },
+            {
+                "id": "analysis",
+                "name": "分析报告",
+                "description": "对分析报告进行反思和完善",
+                "criteria": [c.name for c in AnalysisReflection.get_criteria()],
+                "input_hint": "请输入分析任务或要改进的分析报告"
+            },
+            {
+                "id": "translation",
+                "name": "翻译优化",
+                "description": "对翻译结果进行反思和改进",
+                "criteria": [c.name for c in TranslationReflection.get_criteria()],
+                "input_hint": "请输入翻译任务或要改进的译文"
+            }
+        ],
+        "strategies": [
+            {
+                "id": "simple",
+                "name": "简单反思",
+                "description": "由单一批评者进行反思，适合一般性改进"
+            },
+            {
+                "id": "multi_aspect",
+                "name": "多维度反思（推荐）",
+                "description": "从多个维度进行深入反思，全面提升质量"
+            },
+            {
+                "id": "debate",
+                "name": "辩论式反思",
+                "description": "正反两方辩论，从对立角度发现问题"
+            },
+            {
+                "id": "expert",
+                "name": "专家反思",
+                "description": "由特定领域专家进行专业评估"
+            }
+        ],
+        "default_settings": {
+            "max_iterations": 3,
+            "score_threshold": 0.85
+        }
     }
 
 
