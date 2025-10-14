@@ -414,9 +414,10 @@ USE_CLOUD_EMBEDDING=true
 
 ## 📧 联系方式
 
-- 作者：ShuYixiao
-- 邮箱：chinasjh2022@126.com
+- 作者：舒一笑不秃头
+- 邮箱：yixiaoshu88@163.com
 - 项目地址：[GitHub](https://github.com/your-username/shuyixiao-agent)
+- 作者官网：[shuyixiao.com](https://www.shuyixiao.cn/)
 
 ---
 
