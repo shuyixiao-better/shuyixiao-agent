@@ -734,6 +734,7 @@
             <button class="tab" onclick="switchTab('parallelization')">🚀 Parallelization Agent</button>
             <button class="tab" onclick="switchTab('reflection')">💭 Reflection Agent</button>
             <button class="tab" onclick="switchTab('tooluse')">🔧 Tool Use Agent</button>
+            <button class="tab" onclick="switchTab('planning')">📋 Planning Agent</button>
         </div>
 
         <div class="content">
@@ -1582,6 +1583,269 @@
                     <div id="availableToolsCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
                         <h4 style="margin-bottom: 16px; color: #495057;">🛠️ 可用工具</h4>
                         <div id="availableToolsList" style="max-height: 500px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Planning Agent 标签页 -->
+            <div id="planningTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>📋 Planning Agent - 规划智能体</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            智能分析目标并制定详细的执行计划。系统会将复杂目标分解为可执行的子任务，制定合理的执行顺序，并支持动态调整和进度监控。
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>预定义场景：</label>
+                                <select id="planningScenario" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updatePlanningScenarioInfo()">
+                                    <option value="">-- 自定义规划 --</option>
+                                    <option value="software_development">💻 软件开发项目</option>
+                                    <option value="research_project">🔬 研究项目</option>
+                                    <option value="product_launch">🚀 产品发布</option>
+                                    <option value="learning_project">📚 学习项目</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>执行策略：</label>
+                                <select id="planningStrategy" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="adaptive">🎯 自适应（推荐）</option>
+                                    <option value="sequential">📝 顺序执行</option>
+                                    <option value="parallel">⚡ 并行执行</option>
+                                    <option value="dependency_based">🔗 依赖关系</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 场景信息 -->
+                        <div id="planningScenarioInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">场景信息</h4>
+                            <div id="planningScenarioDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="planningScenarioFeatures" style="margin-bottom: 12px;"></div>
+                        </div>
+
+                        <!-- 快速场景选择 -->
+                        <div style="background: #e7f3ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+                            <h4 style="margin-bottom: 12px; color: #004085;">🚀 快速场景</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                                <button class="btn btn-outline" onclick="setQuickPlanning('开发一个在线购物网站')" style="text-align: left; font-size: 13px;">
+                                    💻 Web开发项目
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickPlanning('研究人工智能在教育中的应用')" style="text-align: left; font-size: 13px;">
+                                    🔬 AI研究项目
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickPlanning('推出新的移动应用产品')" style="text-align: left; font-size: 13px;">
+                                    🚀 产品上市
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickPlanning('学习Python机器学习')" style="text-align: left; font-size: 13px;">
+                                    📚 技能学习
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickPlanning('组织公司年会活动')" style="text-align: left; font-size: 13px;">
+                                    🎉 活动策划
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickPlanning('建立团队知识管理系统')" style="text-align: left; font-size: 13px;">
+                                    📖 知识管理
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 输入区域 -->
+                        <div class="form-group">
+                            <label>目标描述：</label>
+                            <textarea 
+                                id="planningGoal" 
+                                placeholder="请描述您的目标，例如：&#10;- 开发一个电商网站&#10;- 研究某个技术领域&#10;- 学习新的技能&#10;- 推出新产品&#10;- 组织活动或项目&#10;&#10;系统会自动分析目标并制定详细的执行计划。"
+                                style="width: 100%; height: 120px; padding: 15px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical;"
+                            ></textarea>
+                        </div>
+
+                        <!-- 高级选项 -->
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">⚙️ 高级选项</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #495057;">
+                                        <input type="checkbox" id="autoExecute" style="margin: 0;">
+                                        自动执行计划
+                                    </label>
+                                    <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">创建计划后立即开始执行</div>
+                                </div>
+                                <div>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; color: #495057;">
+                                        <input type="checkbox" id="streamExecution" style="margin: 0;">
+                                        流式执行
+                                    </label>
+                                    <div style="font-size: 12px; color: #6c757d; margin-top: 4px;">实时显示执行进度</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 执行按钮 -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button class="btn btn-primary" onclick="createPlanning()" id="planningCreateBtn">
+                                📋 创建计划
+                            </button>
+                            <button class="btn btn-secondary" onclick="showPlanningScenarios()">
+                                🎯 查看场景
+                            </button>
+                            <button class="btn btn-secondary" onclick="showAllPlans()">
+                                📊 所有计划
+                            </button>
+                            <button class="btn btn-outline" onclick="clearPlanningResult()">
+                                🧹 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 进度显示 -->
+                    <div id="planningProgressCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">⚡ 创建进度</h4>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 4px; margin-bottom: 16px;">
+                            <div id="planningProgressBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 8px; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="planningCurrentStep" style="color: #6c757d; font-size: 14px;">准备创建计划...</div>
+                    </div>
+
+                    <!-- 计划详情 -->
+                    <div id="planningDetailCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">📋 计划详情</h4>
+                        
+                        <!-- 计划基本信息 -->
+                        <div style="background: #e7f3ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <div style="font-size: 14px; color: #004085; margin-bottom: 4px;">计划名称</div>
+                                    <div id="planName" style="font-weight: 600; color: #495057;">-</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 14px; color: #004085; margin-bottom: 4px;">执行策略</div>
+                                    <div id="planStrategy" style="font-weight: 600; color: #495057;">-</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <div style="font-size: 14px; color: #004085; margin-bottom: 4px;">计划描述</div>
+                                <div id="planDescription" style="color: #495057;">-</div>
+                            </div>
+                        </div>
+
+                        <!-- 任务统计 -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                            <div style="background: #d1f4e0; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #155724;" id="totalTasks">-</div>
+                                <div style="font-size: 12px; color: #155724;">总任务数</div>
+                            </div>
+                            <div style="background: #cce7ff; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #004085;" id="estimatedHours">-</div>
+                                <div style="font-size: 12px; color: #004085;">预计时长</div>
+                            </div>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #856404;" id="planProgress">0%</div>
+                                <div style="font-size: 12px; color: #856404;">完成进度</div>
+                            </div>
+                            <div style="background: #f8d7da; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #721c24;" id="planStatus">待执行</div>
+                                <div style="font-size: 12px; color: #721c24;">计划状态</div>
+                            </div>
+                        </div>
+
+                        <!-- 任务列表 -->
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">📝 任务列表</h4>
+                            <div id="tasksList" style="max-height: 400px; overflow-y: auto;" class="scrollbar"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="executePlan()" id="executePlanBtn" style="display: none;">
+                                ▶️ 执行计划
+                            </button>
+                            <button class="btn btn-secondary" onclick="executePlanStream()" id="executePlanStreamBtn" style="display: none;">
+                                📡 流式执行
+                            </button>
+                            <button class="btn btn-secondary" onclick="copyPlanResult()">
+                                📋 复制计划
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadPlanResult()">
+                                💾 下载计划
+                            </button>
+                            <button class="btn btn-danger" onclick="deletePlan()" id="deletePlanBtn" style="display: none;">
+                                🗑️ 删除计划
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 执行进度 -->
+                    <div id="executionProgressCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">⚡ 执行进度</h4>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 4px; margin-bottom: 16px;">
+                            <div id="executionProgressBar" style="background: linear-gradient(90deg, #28a745, #20c997); height: 8px; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="executionCurrentTask" style="color: #6c757d; font-size: 14px;">准备执行...</div>
+                    </div>
+
+                    <!-- 执行日志 -->
+                    <div id="executionLogCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">📋 执行日志</h4>
+                        <div id="executionLog" style="max-height: 400px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+
+                    <!-- 执行结果 -->
+                    <div id="planningResultCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">✅ 执行结果</h4>
+                        
+                        <!-- 执行统计 -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                            <div style="background: #d1f4e0; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #155724;" id="executionSuccess">-</div>
+                                <div style="font-size: 12px; color: #155724;">执行状态</div>
+                            </div>
+                            <div style="background: #cce7ff; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #004085;" id="completedTasks">-</div>
+                                <div style="font-size: 12px; color: #004085;">完成任务</div>
+                            </div>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #856404;" id="failedTasks">-</div>
+                                <div style="font-size: 12px; color: #856404;">失败任务</div>
+                            </div>
+                            <div style="background: #f8d7da; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #721c24;" id="executionDuration">-</div>
+                                <div style="font-size: 12px; color: #721c24;">执行时长</div>
+                            </div>
+                        </div>
+
+                        <!-- 最终结果 -->
+                        <div style="background: #d1f4e0; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #155724;">🎯 执行总结</h4>
+                            <div id="planningFinalResult" class="markdown-content"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="copyPlanningResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadPlanningResult()">
+                                💾 下载结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="showPlanningLog()">
+                                📜 查看详细日志
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 场景列表 -->
+                    <div id="scenarioListCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">🎯 预定义场景</h4>
+                        <div id="scenarioList" style="max-height: 500px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+
+                    <!-- 所有计划列表 -->
+                    <div id="allPlansCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">📊 所有计划</h4>
+                        <div id="allPlansList" style="max-height: 500px; overflow-y: auto;" class="scrollbar"></div>
                     </div>
                 </div>
             </div>
@@ -4375,6 +4639,720 @@
                 card.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } else {
                 card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Planning Agent 相关函数
+        let currentPlanId = null;
+
+        async function createPlanning() {
+            const goal = document.getElementById('planningGoal').value.trim();
+            const scenario = document.getElementById('planningScenario').value;
+            const strategy = document.getElementById('planningStrategy').value;
+            const autoExecute = document.getElementById('autoExecute').checked;
+            
+            if (!goal) {
+                alert('请输入目标描述');
+                return;
+            }
+
+            const btn = document.getElementById('planningCreateBtn');
+            btn.disabled = true;
+            btn.textContent = '📋 创建中...';
+
+            showPlanningProgress();
+            updatePlanningProgress(20, '正在分析目标...');
+
+            try {
+                const response = await fetch('/api/planning/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        goal: goal,
+                        scenario: scenario || null,
+                        strategy: strategy,
+                        auto_execute: autoExecute
+                    })
+                });
+
+                updatePlanningProgress(60, '正在生成计划...');
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                updatePlanningProgress(100, '计划创建完成！');
+
+                setTimeout(() => {
+                    hidePlanningProgress();
+                    displayPlanningResult(data);
+                    
+                    if (data.execution_result) {
+                        displayExecutionResult(data.execution_result);
+                    }
+                }, 1000);
+
+            } catch (error) {
+                console.error('创建规划失败:', error);
+                hidePlanningProgress();
+                alert('创建规划失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📋 创建计划';
+            }
+        }
+
+        async function executePlan() {
+            if (!currentPlanId) {
+                alert('没有可执行的计划');
+                return;
+            }
+
+            const btn = document.getElementById('executePlanBtn');
+            btn.disabled = true;
+            btn.textContent = '▶️ 执行中...';
+
+            showExecutionProgress();
+            updateExecutionProgress(0, '准备执行计划...');
+
+            try {
+                const response = await fetch('/api/planning/execute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        plan_id: currentPlanId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                hideExecutionProgress();
+                displayExecutionResult(data);
+
+            } catch (error) {
+                console.error('执行计划失败:', error);
+                hideExecutionProgress();
+                alert('执行计划失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '▶️ 执行计划';
+            }
+        }
+
+        async function executePlanStream() {
+            if (!currentPlanId) {
+                alert('没有可执行的计划');
+                return;
+            }
+
+            const btn = document.getElementById('executePlanStreamBtn');
+            btn.disabled = true;
+            btn.textContent = '📡 执行中...';
+
+            showExecutionProgress();
+            showExecutionLog();
+
+            try {
+                const response = await fetch('/api/planning/execute/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        plan_id: currentPlanId
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                handlePlanningStreamData(data);
+                            } catch (e) {
+                                console.error('解析流数据失败:', e);
+                            }
+                        }
+                    }
+                }
+
+            } catch (error) {
+                console.error('流式执行失败:', error);
+                hideExecutionProgress();
+                alert('流式执行失败: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📡 流式执行';
+            }
+        }
+
+        function handlePlanningStreamData(data) {
+            switch (data.type) {
+                case 'start':
+                    updateExecutionProgress(0, data.message);
+                    addExecutionLogItem('INFO', data.message);
+                    break;
+                case 'progress':
+                    updateExecutionProgress(data.progress * 100, `执行任务: ${data.current_task?.name || '未知'}`);
+                    if (data.current_task) {
+                        addExecutionLogItem('INFO', `开始执行: ${data.current_task.name}`);
+                    }
+                    break;
+                case 'complete':
+                    updateExecutionProgress(100, '执行完成！');
+                    addExecutionLogItem('SUCCESS', '计划执行完成');
+                    setTimeout(() => {
+                        hideExecutionProgress();
+                        displayExecutionResult(data);
+                    }, 1000);
+                    break;
+                case 'error':
+                    addExecutionLogItem('ERROR', data.message);
+                    break;
+            }
+        }
+
+        function showPlanningProgress() {
+            document.getElementById('planningProgressCard').style.display = 'block';
+            document.getElementById('planningProgressCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePlanningProgress(percent, message) {
+            document.getElementById('planningProgressBar').style.width = percent + '%';
+            document.getElementById('planningCurrentStep').textContent = message;
+        }
+
+        function hidePlanningProgress() {
+            document.getElementById('planningProgressCard').style.display = 'none';
+        }
+
+        function showExecutionProgress() {
+            document.getElementById('executionProgressCard').style.display = 'block';
+            document.getElementById('executionProgressCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updateExecutionProgress(percent, message) {
+            document.getElementById('executionProgressBar').style.width = percent + '%';
+            document.getElementById('executionCurrentTask').textContent = message;
+        }
+
+        function hideExecutionProgress() {
+            document.getElementById('executionProgressCard').style.display = 'none';
+        }
+
+        function showExecutionLog() {
+            const logCard = document.getElementById('executionLogCard');
+            logCard.style.display = 'block';
+            document.getElementById('executionLog').innerHTML = '';
+        }
+
+        function addExecutionLogItem(level, message) {
+            const logContainer = document.getElementById('executionLog');
+            const logItem = document.createElement('div');
+            logItem.style.cssText = 'padding: 8px 12px; margin-bottom: 8px; border-radius: 6px; font-size: 14px;';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let bgColor, textColor, icon;
+            
+            switch (level) {
+                case 'INFO':
+                    bgColor = '#e7f3ff';
+                    textColor = '#004085';
+                    icon = 'ℹ️';
+                    break;
+                case 'SUCCESS':
+                    bgColor = '#d1f4e0';
+                    textColor = '#155724';
+                    icon = '✅';
+                    break;
+                case 'ERROR':
+                    bgColor = '#f8d7da';
+                    textColor = '#721c24';
+                    icon = '❌';
+                    break;
+                default:
+                    bgColor = '#f8f9fa';
+                    textColor = '#495057';
+                    icon = '📝';
+            }
+            
+            logItem.style.backgroundColor = bgColor;
+            logItem.style.color = textColor;
+            logItem.innerHTML = `${icon} [${timestamp}] ${message}`;
+            
+            logContainer.appendChild(logItem);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function displayPlanningResult(data) {
+            if (!data.success || !data.plan) {
+                alert('创建计划失败: ' + (data.error_message || '未知错误'));
+                return;
+            }
+
+            const plan = data.plan;
+            currentPlanId = plan.id;
+
+            // 显示计划详情卡片
+            document.getElementById('planningDetailCard').style.display = 'block';
+            
+            // 填充基本信息
+            document.getElementById('planName').textContent = plan.name;
+            document.getElementById('planStrategy').textContent = plan.strategy;
+            document.getElementById('planDescription').textContent = plan.description;
+            
+            // 计算统计信息
+            const totalTasks = plan.tasks.length;
+            const estimatedHours = Math.round(plan.tasks.reduce((sum, task) => sum + task.estimated_duration, 0) / 3600);
+            const progress = Math.round(plan.progress * 100);
+            
+            document.getElementById('totalTasks').textContent = totalTasks;
+            document.getElementById('estimatedHours').textContent = estimatedHours + 'h';
+            document.getElementById('planProgress').textContent = progress + '%';
+            document.getElementById('planStatus').textContent = getStatusText(plan.status);
+            
+            // 显示任务列表
+            displayTasksList(plan.tasks);
+            
+            // 显示执行按钮
+            document.getElementById('executePlanBtn').style.display = 'inline-block';
+            document.getElementById('executePlanStreamBtn').style.display = 'inline-block';
+            document.getElementById('deletePlanBtn').style.display = 'inline-block';
+            
+            // 滚动到结果
+            document.getElementById('planningDetailCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function displayTasksList(tasks) {
+            const container = document.getElementById('tasksList');
+            container.innerHTML = '';
+            
+            tasks.forEach((task, index) => {
+                const taskItem = document.createElement('div');
+                taskItem.style.cssText = 'background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #007bff;';
+                
+                const statusColor = getTaskStatusColor(task.status);
+                const priorityText = getPriorityText(task.priority);
+                const durationText = Math.round(task.estimated_duration / 60) + '分钟';
+                
+                taskItem.innerHTML = `
+                    <div style="display: flex; justify-content: between; align-items: flex-start; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: #495057; margin-bottom: 4px;">
+                                ${index + 1}. ${task.name}
+                            </div>
+                            <div style="font-size: 14px; color: #6c757d; margin-bottom: 8px;">
+                                ${task.description}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="background: ${statusColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                ${getStatusText(task.status)}
+                            </span>
+                            <span style="background: #f8f9fa; color: #495057; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                ${priorityText}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 16px; font-size: 12px; color: #6c757d;">
+                        <span>⏱️ ${durationText}</span>
+                        ${task.dependencies.length > 0 ? `<span>🔗 依赖: ${task.dependencies.join(', ')}</span>` : ''}
+                        ${task.progress > 0 ? `<span>📊 进度: ${Math.round(task.progress * 100)}%</span>` : ''}
+                    </div>
+                `;
+                
+                container.appendChild(taskItem);
+            });
+        }
+
+        function displayExecutionResult(data) {
+            if (!data.success) {
+                alert('执行失败: ' + (data.error_message || '未知错误'));
+                return;
+            }
+
+            // 显示执行结果卡片
+            document.getElementById('planningResultCard').style.display = 'block';
+            
+            // 填充统计信息
+            document.getElementById('executionSuccess').textContent = data.success ? '成功' : '失败';
+            document.getElementById('completedTasks').textContent = data.completed_tasks || 0;
+            document.getElementById('failedTasks').textContent = data.failed_tasks || 0;
+            document.getElementById('executionDuration').textContent = formatDuration(data.total_duration);
+            
+            // 显示执行总结
+            const summary = generateExecutionSummary(data);
+            document.getElementById('planningFinalResult').innerHTML = marked.parse(summary);
+            
+            // 滚动到结果
+            document.getElementById('planningResultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function generateExecutionSummary(data) {
+            const totalTasks = data.completed_tasks + data.failed_tasks;
+            const successRate = totalTasks > 0 ? Math.round((data.completed_tasks / totalTasks) * 100) : 0;
+            
+            return `## 执行总结
+
+**执行状态**: ${data.success ? '✅ 成功完成' : '❌ 执行失败'}
+
+**任务统计**:
+- 总任务数: ${totalTasks}
+- 完成任务: ${data.completed_tasks}
+- 失败任务: ${data.failed_tasks}
+- 成功率: ${successRate}%
+
+**执行时间**: ${formatDuration(data.total_duration)}
+
+**详细日志**: 共 ${data.execution_log?.length || 0} 条记录
+
+${data.error_message ? `**错误信息**: ${data.error_message}` : ''}
+
+---
+*计划执行完成时间: ${new Date().toLocaleString()}*`;
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '待执行',
+                'in_progress': '执行中',
+                'completed': '已完成',
+                'failed': '失败',
+                'blocked': '阻塞',
+                'cancelled': '已取消'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getTaskStatusColor(status) {
+            const colorMap = {
+                'pending': '#6c757d',
+                'in_progress': '#007bff',
+                'completed': '#28a745',
+                'failed': '#dc3545',
+                'blocked': '#fd7e14',
+                'cancelled': '#6c757d'
+            };
+            return colorMap[status] || '#6c757d';
+        }
+
+        function getPriorityText(priority) {
+            const priorityMap = {
+                1: '低',
+                2: '中',
+                3: '高',
+                4: '紧急'
+            };
+            return priorityMap[priority] || '中';
+        }
+
+        function formatDuration(seconds) {
+            if (!seconds) return '0秒';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}小时${minutes}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟${secs}秒`;
+            } else {
+                return `${secs}秒`;
+            }
+        }
+
+        async function showPlanningScenarios() {
+            try {
+                const response = await fetch('/api/planning/scenarios');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayScenarioList(data.scenarios);
+                }
+            } catch (error) {
+                console.error('获取场景失败:', error);
+                alert('获取场景失败: ' + error.message);
+            }
+        }
+
+        function displayScenarioList(scenarios) {
+            const container = document.getElementById('scenarioList');
+            container.innerHTML = '';
+            
+            scenarios.forEach(scenario => {
+                const scenarioItem = document.createElement('div');
+                scenarioItem.style.cssText = 'background: white; padding: 20px; border-radius: 8px; margin-bottom: 16px; border-left: 4px solid #28a745;';
+                
+                scenarioItem.innerHTML = `
+                    <div style="display: flex; justify-content: between; align-items: flex-start; margin-bottom: 12px;">
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 8px 0; color: #495057;">${scenario.name}</h4>
+                            <p style="margin: 0 0 12px 0; color: #6c757d; font-size: 14px;">${scenario.description}</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="selectScenario('${scenario.id}')" style="margin-left: 16px;">
+                            选择场景
+                        </button>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                        ${scenario.features.map(feature => `
+                            <div style="background: #f8f9fa; padding: 8px 12px; border-radius: 6px; font-size: 13px; color: #495057;">
+                                ${feature}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(scenarioItem);
+            });
+            
+            document.getElementById('scenarioListCard').style.display = 'block';
+            document.getElementById('scenarioListCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function selectScenario(scenarioId) {
+            document.getElementById('planningScenario').value = scenarioId;
+            updatePlanningScenarioInfo();
+            document.getElementById('scenarioListCard').style.display = 'none';
+            document.querySelector('#planningTab .rag-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePlanningScenarioInfo() {
+            const scenario = document.getElementById('planningScenario').value;
+            const infoDiv = document.getElementById('planningScenarioInfo');
+            
+            if (scenario) {
+                // 这里可以显示场景的详细信息
+                infoDiv.style.display = 'block';
+                document.getElementById('planningScenarioDescription').textContent = '已选择预定义场景，将使用模板任务';
+                document.getElementById('planningScenarioFeatures').innerHTML = '<div style="color: #28a745;">✅ 使用预定义任务模板</div>';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
+
+        function setQuickPlanning(goal) {
+            document.getElementById('planningGoal').value = goal;
+            document.getElementById('planningGoal').focus();
+        }
+
+        function clearPlanningResult() {
+            // 隐藏所有结果卡片
+            document.getElementById('planningProgressCard').style.display = 'none';
+            document.getElementById('planningDetailCard').style.display = 'none';
+            document.getElementById('executionProgressCard').style.display = 'none';
+            document.getElementById('executionLogCard').style.display = 'none';
+            document.getElementById('planningResultCard').style.display = 'none';
+            document.getElementById('scenarioListCard').style.display = 'none';
+            document.getElementById('allPlansCard').style.display = 'none';
+            
+            // 清空输入
+            document.getElementById('planningGoal').value = '';
+            document.getElementById('planningScenario').value = '';
+            document.getElementById('autoExecute').checked = false;
+            document.getElementById('streamExecution').checked = false;
+            
+            // 重置当前计划ID
+            currentPlanId = null;
+            
+            // 滚动到顶部
+            document.querySelector('#planningTab .rag-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function copyPlanResult() {
+            if (!currentPlanId) return;
+            
+            const planName = document.getElementById('planName').textContent;
+            const planDescription = document.getElementById('planDescription').textContent;
+            const totalTasks = document.getElementById('totalTasks').textContent;
+            
+            const text = `计划名称: ${planName}\n描述: ${planDescription}\n任务数: ${totalTasks}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('计划信息已复制到剪贴板');
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        }
+
+        function downloadPlanResult() {
+            if (!currentPlanId) return;
+            
+            const planName = document.getElementById('planName').textContent;
+            const content = document.getElementById('tasksList').textContent;
+            
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${planName}_计划.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function deletePlan() {
+            if (!currentPlanId) return;
+            
+            if (!confirm('确定要删除这个计划吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/planning/plan/${currentPlanId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('计划已删除');
+                    clearPlanningResult();
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                console.error('删除计划失败:', error);
+                alert('删除计划失败: ' + error.message);
+            }
+        }
+
+        async function showAllPlans() {
+            try {
+                const response = await fetch('/api/planning/plans');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayAllPlansList(data.plans);
+                }
+            } catch (error) {
+                console.error('获取计划列表失败:', error);
+                alert('获取计划列表失败: ' + error.message);
+            }
+        }
+
+        function displayAllPlansList(plans) {
+            const container = document.getElementById('allPlansList');
+            container.innerHTML = '';
+            
+            if (plans.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #6c757d; padding: 40px;">暂无计划</div>';
+            } else {
+                plans.forEach(plan => {
+                    const planItem = document.createElement('div');
+                    planItem.style.cssText = 'background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #007bff;';
+                    
+                    const progress = Math.round(plan.progress * 100);
+                    const estimatedHours = Math.round(plan.tasks.reduce((sum, task) => sum + task.estimated_duration, 0) / 3600);
+                    
+                    planItem.innerHTML = `
+                        <div style="display: flex; justify-content: between; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <h5 style="margin: 0 0 8px 0; color: #495057;">${plan.name}</h5>
+                                <p style="margin: 0 0 8px 0; color: #6c757d; font-size: 14px;">${plan.description}</p>
+                                <div style="display: flex; gap: 16px; font-size: 12px; color: #6c757d;">
+                                    <span>📋 ${plan.tasks.length} 个任务</span>
+                                    <span>⏱️ ${estimatedHours}小时</span>
+                                    <span>📊 ${progress}%</span>
+                                    <span>📅 ${new Date(plan.created_at).toLocaleDateString()}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-left: 16px;">
+                                <button class="btn btn-sm btn-secondary" onclick="loadPlan('${plan.id}')">
+                                    查看
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deletePlanFromList('${plan.id}')">
+                                    删除
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    container.appendChild(planItem);
+                });
+            }
+            
+            document.getElementById('allPlansCard').style.display = 'block';
+            document.getElementById('allPlansCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function loadPlan(planId) {
+            try {
+                const response = await fetch(`/api/planning/plan/${planId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayPlanningResult({ success: true, plan: data.plan });
+                    document.getElementById('allPlansCard').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('加载计划失败:', error);
+                alert('加载计划失败: ' + error.message);
+            }
+        }
+
+        async function deletePlanFromList(planId) {
+            if (!confirm('确定要删除这个计划吗？')) return;
+            
+            try {
+                const response = await fetch(`/api/planning/plan/${planId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    showAllPlans(); // 重新加载列表
+                } else {
+                    throw new Error('删除失败');
+                }
+            } catch (error) {
+                console.error('删除计划失败:', error);
+                alert('删除计划失败: ' + error.message);
+            }
+        }
+
+        function copyPlanningResult() {
+            const result = document.getElementById('planningFinalResult').textContent;
+            navigator.clipboard.writeText(result).then(() => {
+                alert('执行结果已复制到剪贴板');
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        }
+
+        function downloadPlanningResult() {
+            const result = document.getElementById('planningFinalResult').textContent;
+            const blob = new Blob([result], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'planning_result.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showPlanningLog() {
+            const logCard = document.getElementById('executionLogCard');
+            if (logCard.style.display === 'none') {
+                logCard.style.display = 'block';
+                logCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                logCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
 

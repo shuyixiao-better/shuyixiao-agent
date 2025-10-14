@@ -61,6 +61,14 @@ from .agents.tool_use_agent import (
     ToolParameter,
     ToolExecutionResult
 )
+from .agents.planning_agent import (
+    PlanningAgent,
+    PlanningStrategy,
+    TaskStatus,
+    TaskPriority,
+    ProjectPlanningScenarios,
+    PlanningTaskHandlers
+)
 from .tools.predefined_tools import PredefinedToolsRegistry
 from .tools.basic_tools import get_basic_tools
 from .config import settings
@@ -378,6 +386,20 @@ class ToolExecuteRequest(BaseModel):
     parameters: Dict[str, Any]
 
 
+class PlanningRequest(BaseModel):
+    """规划请求模型"""
+    goal: str
+    context: Optional[Dict[str, Any]] = None
+    scenario: Optional[str] = None  # 预定义场景
+    strategy: Optional[str] = "adaptive"  # 规划策略
+    auto_execute: bool = False  # 是否自动执行
+
+
+class PlanExecutionRequest(BaseModel):
+    """计划执行请求模型"""
+    plan_id: str
+
+
 def get_agent(agent_type: str, system_message: Optional[str] = None):
     """获取或创建 Agent 实例"""
     cache_key = f"{agent_type}_{system_message or 'default'}"
@@ -407,6 +429,15 @@ def get_agent(agent_type: str, system_message: Optional[str] = None):
             )
             # 注册所有预定义工具
             PredefinedToolsRegistry.register_all_tools(agent)
+            agents[cache_key] = agent
+        elif agent_type == "planning":
+            agent = PlanningAgent(
+                llm_client=GiteeAIClient(),
+                strategy=PlanningStrategy.ADAPTIVE,
+                verbose=True
+            )
+            # 注册所有预定义的任务处理器
+            PlanningTaskHandlers.register_all_handlers(agent)
             agents[cache_key] = agent
         else:
             raise ValueError(f"未知的 agent 类型: {agent_type}")
@@ -2283,6 +2314,252 @@ async def get_tool_use_scenarios():
             "📈 统计分析：提供工具使用统计和性能分析"
         ]
     }
+
+
+# Planning Agent API 端点
+
+@app.post("/api/planning/create")
+async def create_planning(request: PlanningRequest):
+    """创建规划计划"""
+    try:
+        agent = get_agent("planning")
+        
+        # 如果指定了预定义场景，使用场景模板
+        if request.scenario:
+            scenarios = ProjectPlanningScenarios.get_all_scenarios(agent.llm_client)
+            if request.scenario in scenarios:
+                scenario_data = scenarios[request.scenario]
+                
+                # 创建基于模板的计划
+                from .agents.planning_agent import ExecutionPlan, Task
+                import time
+                
+                plan_id = f"plan_{int(time.time())}"
+                plan = ExecutionPlan(
+                    id=plan_id,
+                    name=f"{scenario_data['name']} - {request.goal}",
+                    description=f"基于 {scenario_data['description']} 为目标 '{request.goal}' 创建的计划",
+                    strategy=PlanningStrategy(scenario_data['strategy'])
+                )
+                
+                # 创建任务
+                for task_data in scenario_data['template_tasks']:
+                    task = Task(
+                        id=task_data['id'],
+                        name=task_data['name'],
+                        description=task_data['description'],
+                        priority=TaskPriority(task_data['priority']),
+                        estimated_duration=task_data['estimated_duration'],
+                        dependencies=task_data.get('dependencies', []),
+                        metadata=task_data.get('metadata', {})
+                    )
+                    
+                    # 设置任务处理器
+                    task_type = task_data.get('task_type', 'default')
+                    if task_type in agent.task_handlers:
+                        task.handler = agent.task_handlers[task_type]
+                    else:
+                        task.handler = agent._default_task_handler
+                    
+                    plan.add_task(task)
+                
+                # 保存计划
+                agent.plans[plan.id] = plan
+                
+                result_data = {
+                    "success": True,
+                    "plan": plan.to_dict(),
+                    "message": f"成功创建基于 {scenario_data['name']} 的规划计划"
+                }
+                
+                # 如果需要自动执行
+                if request.auto_execute:
+                    execution_result = agent.execute_plan(plan.id)
+                    result_data["execution_result"] = execution_result.to_dict()
+                
+                return result_data
+            else:
+                raise HTTPException(status_code=400, detail=f"未知的场景类型: {request.scenario}")
+        else:
+            # 使用LLM创建自定义计划
+            result = agent.create_plan_from_goal(request.goal, request.context)
+            
+            result_data = {
+                "success": result.success,
+                "plan": result.plan.to_dict() if result.plan else None,
+                "error_message": result.error_message,
+                "execution_log": result.execution_log
+            }
+            
+            # 如果需要自动执行
+            if request.auto_execute and result.success:
+                execution_result = agent.execute_plan(result.plan.id)
+                result_data["execution_result"] = execution_result.to_dict()
+            
+            return result_data
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建规划失败: {str(e)}")
+
+
+@app.post("/api/planning/execute")
+async def execute_planning(request: PlanExecutionRequest):
+    """执行规划计划"""
+    try:
+        agent = get_agent("planning")
+        result = agent.execute_plan(request.plan_id)
+        
+        return {
+            "success": result.success,
+            "plan": result.plan.to_dict() if result.plan else None,
+            "execution_log": result.execution_log,
+            "error_message": result.error_message,
+            "total_duration": result.total_duration,
+            "completed_tasks": result.completed_tasks,
+            "failed_tasks": result.failed_tasks
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"执行规划失败: {str(e)}")
+
+
+@app.post("/api/planning/execute/stream")
+async def execute_planning_stream(request: PlanExecutionRequest):
+    """流式执行规划计划"""
+    try:
+        agent = get_agent("planning")
+        
+        def generate_progress():
+            def progress_callback(progress: float, current_task):
+                progress_data = {
+                    "type": "progress",
+                    "progress": progress,
+                    "current_task": current_task.to_dict() if current_task else None,
+                    "timestamp": datetime.now().isoformat()
+                }
+                return f"data: {json.dumps(progress_data, ensure_ascii=False)}\n\n"
+            
+            # 开始执行
+            yield f"data: {json.dumps({'type': 'start', 'message': '开始执行规划'}, ensure_ascii=False)}\n\n"
+            
+            result = agent.execute_plan(request.plan_id, progress_callback)
+            
+            # 发送最终结果
+            final_data = {
+                "type": "complete",
+                "success": result.success,
+                "plan": result.plan.to_dict() if result.plan else None,
+                "execution_log": result.execution_log,
+                "error_message": result.error_message,
+                "total_duration": result.total_duration,
+                "completed_tasks": result.completed_tasks,
+                "failed_tasks": result.failed_tasks
+            }
+            yield f"data: {json.dumps(final_data, ensure_ascii=False)}\n\n"
+        
+        return StreamingResponse(
+            generate_progress(),
+            media_type="text/plain",
+            headers={"Cache-Control": "no-cache"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"流式执行规划失败: {str(e)}")
+
+
+@app.get("/api/planning/plans")
+async def get_all_plans():
+    """获取所有规划计划"""
+    try:
+        agent = get_agent("planning")
+        plans = agent.list_plans()
+        
+        return {
+            "success": True,
+            "plans": [plan.to_dict() for plan in plans],
+            "count": len(plans)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取规划列表失败: {str(e)}")
+
+
+@app.get("/api/planning/plan/{plan_id}")
+async def get_plan_detail(plan_id: str):
+    """获取规划计划详情"""
+    try:
+        agent = get_agent("planning")
+        plan = agent.get_plan(plan_id)
+        
+        if not plan:
+            raise HTTPException(status_code=404, detail=f"计划不存在: {plan_id}")
+        
+        return {
+            "success": True,
+            "plan": plan.to_dict()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取规划详情失败: {str(e)}")
+
+
+@app.delete("/api/planning/plan/{plan_id}")
+async def delete_plan(plan_id: str):
+    """删除规划计划"""
+    try:
+        agent = get_agent("planning")
+        success = agent.delete_plan(plan_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail=f"计划不存在: {plan_id}")
+        
+        return {
+            "success": True,
+            "message": f"成功删除计划: {plan_id}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除规划失败: {str(e)}")
+
+
+@app.get("/api/planning/scenarios")
+async def get_planning_scenarios():
+    """获取所有预定义的规划场景"""
+    try:
+        agent = get_agent("planning")
+        scenarios = ProjectPlanningScenarios.get_all_scenarios(agent.llm_client)
+        
+        # 转换为前端友好的格式
+        scenario_list = []
+        for scenario_id, scenario_data in scenarios.items():
+            scenario_info = {
+                "id": scenario_id,
+                "name": scenario_data["name"],
+                "description": scenario_data["description"],
+                "strategy": scenario_data["strategy"],
+                "task_count": len(scenario_data["template_tasks"]),
+                "estimated_duration": sum(task["estimated_duration"] for task in scenario_data["template_tasks"]),
+                "features": [
+                    f"📋 {len(scenario_data['template_tasks'])} 个预定义任务",
+                    f"⏱️ 预计耗时 {sum(task['estimated_duration'] for task in scenario_data['template_tasks']) // 3600} 小时",
+                    f"🎯 策略: {scenario_data['strategy']}",
+                    f"🔄 自动依赖管理"
+                ]
+            }
+            scenario_list.append(scenario_info)
+        
+        return {
+            "success": True,
+            "scenarios": scenario_list,
+            "count": len(scenario_list)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取规划场景失败: {str(e)}")
 
 
 if __name__ == "__main__":
