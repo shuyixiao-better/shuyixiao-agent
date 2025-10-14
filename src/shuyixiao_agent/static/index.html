@@ -730,6 +730,7 @@
             <button class="tab" onclick="switchTab('rag')">📚 RAG 问答</button>
             <button class="tab" onclick="switchTab('knowledge')">🗄️ 知识库管理</button>
             <button class="tab" onclick="switchTab('prompting')">🔗 Prompt Chaining</button>
+            <button class="tab" onclick="switchTab('routing')">🎯 Routing Agent</button>
         </div>
 
         <div class="content">
@@ -915,6 +916,125 @@
                         </div>
                         <div id="docStats"></div>
                         <div id="docBrowser"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Routing Agent 标签页 -->
+            <div id="routingTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景和策略选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>🎯 Routing Agent - 智能路由</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            根据任务类型智能选择最合适的处理器，实现精准、高效的任务分发
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>选择场景：</label>
+                                <select id="routingScenario" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="loadRoutingRoutes()">
+                                    <option value="">-- 加载中 --</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>路由策略：</label>
+                                <select id="routingStrategy" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="hybrid">🔄 混合路由（推荐）</option>
+                                    <option value="llm_based">🤖 LLM路由</option>
+                                    <option value="keyword">🔍 关键词路由</option>
+                                    <option value="rule_based">📏 规则路由</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 场景信息 -->
+                        <div id="routingScenarioInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">场景信息</h4>
+                            <div id="routingDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="routingRoutesList" style="margin-bottom: 12px;"></div>
+                        </div>
+
+                        <!-- 策略说明 -->
+                        <div id="routingStrategyInfo" style="background: #e7f5ff; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
+                            <strong>💡 策略说明：</strong> <span id="strategyDescription">混合路由结合规则、关键词和LLM的优势，平衡效率和准确性</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="routingInputLabel">输入任务：</label>
+                            <textarea id="routingInput" placeholder="例如：帮我写一个Python排序函数" rows="6" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="executeRouting()" id="routingExecuteBtn" style="flex: 1;">
+                                <span>🚀 执行路由</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearRoutingResult()">
+                                🗑️ 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 路由结果展示 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="routingResultCard">
+                        <h3>📊 路由结果</h3>
+                        
+                        <!-- 路由决策 -->
+                        <div id="routingDecision" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #667eea;">
+                            <h4 style="margin-bottom: 16px; color: #495057;">🔀 路由决策</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                                <div class="info-item">
+                                    <span class="info-label">选择路由：</span>
+                                    <span class="info-value" id="selectedRoute"></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">置信度：</span>
+                                    <span class="info-value" id="routingConfidence"></span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">执行时间：</span>
+                                    <span class="info-value" id="routingTime"></span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 6px;">
+                                <strong style="font-size: 13px; color: #495057;">💡 路由原因：</strong>
+                                <p id="routingReason" style="margin: 8px 0 0 0; font-size: 13px; color: #6c757d;"></p>
+                            </div>
+                        </div>
+
+                        <!-- 置信度可视化 -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 14px; font-weight: 500; color: #495057;">匹配置信度</span>
+                                <span id="confidencePercent" style="font-size: 14px; font-weight: 600; color: #667eea;">0%</span>
+                            </div>
+                            <div style="background: #e9ecef; height: 12px; border-radius: 6px; overflow: hidden;">
+                                <div id="confidenceBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.5s;"></div>
+                            </div>
+                        </div>
+
+                        <!-- 处理结果 -->
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">✨ 处理结果</h4>
+                            <div id="routingOutput" class="markdown-content"></div>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button class="btn btn-secondary" onclick="copyRoutingResult()">
+                                📋 复制结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 可用路由列表 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>📋 可用路由</h3>
+                        <p style="font-size: 13px; color: #6c757d; margin-bottom: 12px;">
+                            当前场景下的所有可用路由和说明
+                        </p>
+                        <div id="availableRoutes"></div>
                     </div>
                 </div>
             </div>
@@ -2022,6 +2142,9 @@
                 
                 // 加载提示链类型
                 loadChainTypes();
+                
+                // 加载路由场景
+                loadRoutingScenarios();
             } catch (error) {
                 console.error('Health check failed:', error);
             }
@@ -2335,6 +2458,249 @@
             URL.revokeObjectURL(url);
             
             console.log('已下载结果到:', filename);
+        }
+
+        // ==================== Routing Agent 相关函数 ====================
+
+        let routingScenarios = [];
+        let routingStrategies = [];
+        let currentRoutingResult = null;
+
+        // 加载路由场景
+        async function loadRoutingScenarios() {
+            try {
+                const response = await fetch(`${API_BASE}/api/routing/scenarios`);
+                const data = await response.json();
+                
+                routingScenarios = data.scenarios;
+                routingStrategies = data.strategies;
+                
+                // 填充场景下拉框
+                const select = document.getElementById('routingScenario');
+                select.innerHTML = '<option value="">-- 请选择场景 --</option>';
+                data.scenarios.forEach(scenario => {
+                    const option = document.createElement('option');
+                    option.value = scenario.id;
+                    option.textContent = scenario.name;
+                    select.appendChild(option);
+                });
+                
+                console.log('已加载路由场景:', routingScenarios);
+                
+                // 更新策略说明
+                updateStrategyDescription();
+                
+            } catch (error) {
+                console.error('加载路由场景失败:', error);
+            }
+        }
+
+        // 更新策略说明
+        function updateStrategyDescription() {
+            const strategySelect = document.getElementById('routingStrategy');
+            const strategyId = strategySelect.value;
+            const descSpan = document.getElementById('strategyDescription');
+            
+            const strategy = routingStrategies.find(s => s.id === strategyId);
+            if (strategy) {
+                descSpan.textContent = strategy.description;
+            }
+        }
+
+        // 监听策略变化
+        document.getElementById('routingStrategy').addEventListener('change', updateStrategyDescription);
+
+        // 加载路由列表
+        async function loadRoutingRoutes() {
+            const select = document.getElementById('routingScenario');
+            const scenarioId = select.value;
+            const infoDiv = document.getElementById('routingScenarioInfo');
+            const routesListDiv = document.getElementById('availableRoutes');
+            
+            if (!scenarioId) {
+                infoDiv.style.display = 'none';
+                routesListDiv.innerHTML = '<div class="alert alert-info">请先选择一个场景</div>';
+                return;
+            }
+            
+            try {
+                // 显示场景信息
+                const scenario = routingScenarios.find(s => s.id === scenarioId);
+                if (scenario) {
+                    infoDiv.style.display = 'block';
+                    document.getElementById('routingDescription').textContent = scenario.description;
+                    document.getElementById('routingRoutesList').innerHTML = `
+                        <strong style="font-size: 13px; color: #495057;">包含路由：</strong>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+                            ${scenario.routes.map(route => `
+                                <span style="background: white; padding: 6px 12px; border-radius: 6px; border: 1px solid #dee2e6; font-size: 12px;">
+                                    ${route}
+                                </span>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                // 加载详细路由信息
+                routesListDiv.innerHTML = '<div class="alert alert-info">加载中...</div>';
+                
+                const response = await fetch(`${API_BASE}/api/routing/routes?scenario=${scenarioId}`);
+                const data = await response.json();
+                
+                if (data.routes.length === 0) {
+                    routesListDiv.innerHTML = '<div class="alert alert-info">该场景暂无路由</div>';
+                    return;
+                }
+                
+                // 渲染路由列表
+                let html = '<div style="display: grid; gap: 12px;">';
+                data.routes.forEach(route => {
+                    html += `
+                        <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; border: 2px solid #dee2e6;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <h4 style="margin: 0; color: #667eea; font-size: 15px;">${route.name}</h4>
+                                <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                                    优先级: ${route.priority}
+                                </span>
+                            </div>
+                            <p style="margin: 8px 0; color: #6c757d; font-size: 13px;">${route.description}</p>
+                            ${route.keywords && route.keywords.length > 0 ? `
+                                <div style="margin-top: 8px;">
+                                    <strong style="font-size: 12px; color: #495057;">关键词：</strong>
+                                    <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                                        ${route.keywords.map(kw => `
+                                            <span style="background: #e7f5ff; color: #1e40af; padding: 2px 6px; border-radius: 3px; font-size: 11px;">
+                                                ${kw}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${route.examples && route.examples.length > 0 ? `
+                                <div style="margin-top: 8px;">
+                                    <strong style="font-size: 12px; color: #495057;">示例：</strong>
+                                    <ul style="margin: 4px 0 0 20px; font-size: 12px; color: #6c757d;">
+                                        ${route.examples.map(ex => `<li>${ex}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                routesListDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载路由失败:', error);
+                routesListDiv.innerHTML = '<div class="alert alert-error">✗ 加载失败: ' + error.message + '</div>';
+            }
+        }
+
+        // 执行路由
+        async function executeRouting() {
+            const inputText = document.getElementById('routingInput').value.trim();
+            const scenario = document.getElementById('routingScenario').value;
+            const strategy = document.getElementById('routingStrategy').value;
+            const executeBtn = document.getElementById('routingExecuteBtn');
+            const resultCard = document.getElementById('routingResultCard');
+            
+            if (!scenario) {
+                alert('请先选择一个场景');
+                return;
+            }
+            
+            if (!inputText) {
+                alert('请输入任务');
+                return;
+            }
+            
+            // 显示结果卡片
+            resultCard.style.display = 'block';
+            
+            // 禁用按钮
+            executeBtn.disabled = true;
+            executeBtn.innerHTML = '<span>⏳ 执行中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/routing/route`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        input_text: inputText,
+                        scenario: scenario,
+                        strategy: strategy,
+                        verbose: false
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    throw new Error(data.detail || '路由执行失败');
+                }
+                
+                // 显示路由决策
+                document.getElementById('selectedRoute').textContent = data.route_description;
+                document.getElementById('routingConfidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+                document.getElementById('routingTime').textContent = data.execution_time.toFixed(2) + 's';
+                document.getElementById('routingReason').textContent = data.routing_reason;
+                
+                // 更新置信度条
+                const confidencePercent = (data.confidence * 100).toFixed(0) + '%';
+                document.getElementById('confidencePercent').textContent = confidencePercent;
+                document.getElementById('confidenceBar').style.width = confidencePercent;
+                
+                // 显示处理结果
+                const outputDiv = document.getElementById('routingOutput');
+                if (typeof marked !== 'undefined') {
+                    const html = marked.parse(data.output);
+                    outputDiv.innerHTML = DOMPurify.sanitize(html);
+                } else {
+                    outputDiv.textContent = data.output;
+                }
+                
+                // 保存结果
+                currentRoutingResult = data;
+                
+                // 滚动到结果
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+            } catch (error) {
+                console.error('执行路由失败:', error);
+                alert('执行失败: ' + error.message);
+            } finally {
+                // 恢复按钮
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = '<span>🚀 执行路由</span>';
+            }
+        }
+
+        // 清除结果
+        function clearRoutingResult() {
+            document.getElementById('routingResultCard').style.display = 'none';
+            document.getElementById('routingInput').value = '';
+            document.getElementById('routingOutput').innerHTML = '';
+            document.getElementById('confidenceBar').style.width = '0%';
+            currentRoutingResult = null;
+        }
+
+        // 复制结果
+        function copyRoutingResult() {
+            if (!currentRoutingResult) {
+                alert('没有可复制的结果');
+                return;
+            }
+            
+            navigator.clipboard.writeText(currentRoutingResult.output)
+                .then(() => {
+                    alert('✅ 结果已复制到剪贴板');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                });
         }
     </script>
 </body>

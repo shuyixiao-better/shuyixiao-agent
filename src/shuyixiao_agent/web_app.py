@@ -27,6 +27,12 @@ from .agents.prompt_chaining_agent import (
     StoryCreationChain,
     ProductAnalysisChain
 )
+from .agents.routing_agent import (
+    RoutingAgent,
+    RoutingStrategy,
+    SmartAssistantRoutes,
+    DeveloperAssistantRoutes
+)
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
@@ -154,6 +160,9 @@ rag_agents: Dict[str, Any] = {}
 
 # Prompt Chaining Agent 实例缓存
 prompt_chaining_agent: Optional[PromptChainingAgent] = None
+
+# Routing Agent 实例缓存
+routing_agents: Dict[str, RoutingAgent] = {}
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
@@ -286,6 +295,14 @@ class PromptChainingRequest(BaseModel):
     save_result: bool = True
 
 
+class RoutingRequest(BaseModel):
+    """Routing 请求模型"""
+    input_text: str
+    scenario: str = "smart_assistant"  # smart_assistant, developer_assistant, custom
+    strategy: str = "hybrid"  # rule_based, keyword, llm_based, hybrid
+    verbose: bool = False
+
+
 def get_agent(agent_type: str, system_message: Optional[str] = None):
     """获取或创建 Agent 实例"""
     cache_key = f"{agent_type}_{system_message or 'default'}"
@@ -349,6 +366,32 @@ def get_prompt_chaining_agent():
         print("[信息] Prompt Chaining Agent 已创建")
     
     return prompt_chaining_agent
+
+
+def get_routing_agent(scenario: str = "smart_assistant", strategy: str = "hybrid"):
+    """获取或创建 Routing Agent 实例"""
+    cache_key = f"{scenario}_{strategy}"
+    
+    if cache_key not in routing_agents:
+        llm_client = GiteeAIClient()
+        agent = RoutingAgent(
+            llm_client=llm_client,
+            strategy=RoutingStrategy(strategy),
+            verbose=False
+        )
+        
+        # 根据场景注册路由
+        if scenario == "smart_assistant":
+            routes = SmartAssistantRoutes.get_routes(llm_client)
+            agent.register_routes(routes)
+        elif scenario == "developer_assistant":
+            routes = DeveloperAssistantRoutes.get_routes(llm_client)
+            agent.register_routes(routes)
+        
+        routing_agents[cache_key] = agent
+        print(f"[信息] Routing Agent 已创建: {scenario} ({strategy})")
+    
+    return routing_agents[cache_key]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1124,6 +1167,125 @@ async def get_chain_types():
                 "description": "系统化的产品需求分析和规划",
                 "steps": ["需求理解", "功能设计", "技术方案", "实施计划"],
                 "input_hint": "请描述产品需求，例如：一个帮助开发者快速搭建API的工具"
+            }
+        ]
+    }
+
+
+# ========== Routing Agent 相关接口 ==========
+
+@app.post("/api/routing/route")
+async def route_request(request: RoutingRequest):
+    """执行路由决策和处理"""
+    try:
+        agent = get_routing_agent(request.scenario, request.strategy)
+        result = agent.route(request.input_text)
+        
+        if not result.success:
+            raise HTTPException(
+                status_code=500,
+                detail=f"路由失败: {result.error_message}"
+            )
+        
+        return {
+            "success": True,
+            "route_name": result.route_name,
+            "route_description": result.route_description,
+            "output": result.handler_output,
+            "confidence": result.confidence,
+            "routing_reason": result.routing_reason,
+            "execution_time": result.execution_time
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"路由执行失败: {str(e)}")
+
+
+@app.get("/api/routing/routes")
+async def get_routes(scenario: str = "smart_assistant"):
+    """获取指定场景的所有路由信息"""
+    try:
+        # 创建一个临时 agent 来获取路由信息
+        llm_client = GiteeAIClient()
+        agent = RoutingAgent(llm_client=llm_client, strategy="hybrid", verbose=False)
+        
+        # 注册路由
+        if scenario == "smart_assistant":
+            routes = SmartAssistantRoutes.get_routes(llm_client)
+        elif scenario == "developer_assistant":
+            routes = DeveloperAssistantRoutes.get_routes(llm_client)
+        else:
+            raise HTTPException(status_code=400, detail=f"未知场景: {scenario}")
+        
+        agent.register_routes(routes)
+        
+        # 获取路由信息
+        routes_info = agent.get_routes_info()
+        
+        return {
+            "scenario": scenario,
+            "routes": routes_info,
+            "total_count": len(routes_info)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取路由信息失败: {str(e)}")
+
+
+@app.get("/api/routing/scenarios")
+async def get_scenarios():
+    """获取所有可用的路由场景"""
+    return {
+        "scenarios": [
+            {
+                "id": "smart_assistant",
+                "name": "智能助手",
+                "description": "通用智能助手，支持代码生成、写作、分析、翻译等任务",
+                "routes": [
+                    "代码生成",
+                    "内容创作",
+                    "数据分析",
+                    "翻译",
+                    "问答",
+                    "摘要总结"
+                ]
+            },
+            {
+                "id": "developer_assistant",
+                "name": "开发者助手",
+                "description": "专为开发者设计，支持代码审查、调试、优化、架构设计",
+                "routes": [
+                    "代码审查",
+                    "调试",
+                    "性能优化",
+                    "架构设计"
+                ]
+            }
+        ],
+        "strategies": [
+            {
+                "id": "rule_based",
+                "name": "规则路由",
+                "description": "基于正则表达式的精确匹配"
+            },
+            {
+                "id": "keyword",
+                "name": "关键词路由",
+                "description": "基于关键词的快速匹配"
+            },
+            {
+                "id": "llm_based",
+                "name": "LLM路由",
+                "description": "使用大语言模型进行智能路由决策"
+            },
+            {
+                "id": "hybrid",
+                "name": "混合路由（推荐）",
+                "description": "结合规则、关键词和LLM的优势"
             }
         ]
     }

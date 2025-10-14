@@ -280,6 +280,64 @@ python examples/11_prompt_chaining_simple.py
 
 ---
 
+### 12_routing_agent_demo.py - Routing Agent 智能路由 ⭐ **新功能**
+
+**智能任务路由系统！** 根据输入类型自动选择最合适的处理器，实现精准、高效的任务分发。
+
+**运行方式：**
+```bash
+python examples/12_routing_agent_demo.py
+```
+
+**学习要点：**
+- Routing Agent 的核心概念和工作原理
+- 如何使用智能助手和开发者助手场景
+- 如何自定义路由配置和处理器
+- 不同路由策略的对比（规则、关键词、LLM、混合）
+- 交互模式的使用
+
+**包含的演示：**
+
+1. **智能助手路由** - 通用助手任务分发
+   - 自动识别：代码生成、内容创作、数据分析、翻译、问答、摘要
+   - 测试6种不同类型的任务输入
+   
+2. **开发者助手路由** - 专业开发任务处理
+   - 代码审查、调试、性能优化、架构设计
+   - 针对开发场景优化的路由规则
+
+3. **自定义路由** - 创建你自己的路由
+   - 定义自定义处理器
+   - 配置关键词和正则模式
+   - 设置优先级
+
+4. **策略对比** - 了解不同策略的差异
+   - 关键词路由：快速、精确
+   - 规则路由：基于正则表达式
+   - LLM路由：智能理解
+   - 混合路由：结合所有优势（推荐）
+
+5. **交互模式** - 实时体验路由功能
+   - 选择场景后开始对话
+   - 观察系统如何自动路由任务
+
+**适合人群：**
+- 🎯 需要构建多功能智能助手的开发者
+- 🎯 想要实现任务自动分类的项目
+- 🎯 需要专业化处理不同任务类型的系统
+
+**与其他模式的区别：**
+- **vs Simple Agent**: Routing可以根据任务类型选择专门的处理器
+- **vs Prompt Chaining**: Routing用于任务分类，Chaining用于流程化处理
+- **组合使用**: 先用Routing识别任务类型，再用Chaining执行复杂流程
+
+📖 **深入学习：**
+- [Routing Agent 功能文档](../ROUTING_AGENT_FEATURES.md)
+- [Agentic Design Patterns - Routing](https://github.com/ginobefun/agentic-design-patterns-cn/blob/main/08-Chapter-02-Routing.md)
+- [Web界面体验](../docs/web_interface.md) - 运行 `python run_web.py` 后访问 "🎯 Routing Agent" 标签页
+
+---
+
 ## 准备工作
 
 在运行示例之前，请确保：
