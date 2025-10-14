@@ -33,6 +33,18 @@ from .agents.routing_agent import (
     SmartAssistantRoutes,
     DeveloperAssistantRoutes
 )
+from .agents.parallelization_agent import (
+    ParallelizationAgent,
+    ParallelStrategy,
+    AggregationMethod,
+    ParallelTask,
+    MultiPerspectiveAnalysis,
+    ParallelTranslation,
+    ParallelContentGeneration,
+    ParallelCodeReview,
+    ParallelResearch,
+    ConsensusGenerator
+)
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
@@ -163,6 +175,9 @@ prompt_chaining_agent: Optional[PromptChainingAgent] = None
 
 # Routing Agent 实例缓存
 routing_agents: Dict[str, RoutingAgent] = {}
+
+# Parallelization Agent 实例缓存
+parallelization_agent: Optional[ParallelizationAgent] = None
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
@@ -303,6 +318,21 @@ class RoutingRequest(BaseModel):
     verbose: bool = False
 
 
+class ParallelizationRequest(BaseModel):
+    """Parallelization 请求模型"""
+    scenario: str  # multi_perspective, translation, content_gen, code_review, research, consensus, custom
+    input_text: str
+    strategy: str = "full_parallel"  # full_parallel, batch_parallel, pipeline, vote, ensemble
+    aggregation: str = "summarize"  # merge, concat, first, best, summarize, vote, consensus
+    perspectives: Optional[List[str]] = None  # 用于 multi_perspective
+    languages: Optional[List[str]] = None  # 用于 translation
+    sections: Optional[List[str]] = None  # 用于 content_gen
+    aspects: Optional[List[str]] = None  # 用于 research
+    num_generations: Optional[int] = 5  # 用于 consensus
+    batch_size: int = 3
+    max_workers: int = 5
+
+
 def get_agent(agent_type: str, system_message: Optional[str] = None):
     """获取或创建 Agent 实例"""
     cache_key = f"{agent_type}_{system_message or 'default'}"
@@ -392,6 +422,22 @@ def get_routing_agent(scenario: str = "smart_assistant", strategy: str = "hybrid
         print(f"[信息] Routing Agent 已创建: {scenario} ({strategy})")
     
     return routing_agents[cache_key]
+
+
+def get_parallelization_agent(max_workers: int = 5):
+    """获取或创建 Parallelization Agent 实例"""
+    global parallelization_agent
+    
+    if parallelization_agent is None or parallelization_agent.max_workers != max_workers:
+        llm_client = GiteeAIClient()
+        parallelization_agent = ParallelizationAgent(
+            llm_client=llm_client,
+            max_workers=max_workers,
+            verbose=False
+        )
+        print(f"[信息] Parallelization Agent 已创建 (max_workers={max_workers})")
+    
+    return parallelization_agent
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -1286,6 +1332,363 @@ async def get_scenarios():
                 "id": "hybrid",
                 "name": "混合路由（推荐）",
                 "description": "结合规则、关键词和LLM的优势"
+            }
+        ]
+    }
+
+
+# ========== Parallelization Agent 相关接口 ==========
+
+@app.post("/api/parallelization/execute")
+async def execute_parallelization(request: ParallelizationRequest):
+    """执行并行化任务"""
+    try:
+        agent = get_parallelization_agent(request.max_workers)
+        
+        # 根据场景创建任务
+        tasks = []
+        
+        if request.scenario == "multi_perspective":
+            tasks = MultiPerspectiveAnalysis.create_tasks(
+                request.input_text,
+                perspectives=request.perspectives
+            )
+        
+        elif request.scenario == "translation":
+            tasks = ParallelTranslation.create_tasks(
+                request.input_text,
+                target_languages=request.languages
+            )
+        
+        elif request.scenario == "content_gen":
+            tasks = ParallelContentGeneration.create_tasks(
+                request.input_text,
+                sections=request.sections
+            )
+        
+        elif request.scenario == "code_review":
+            tasks = ParallelCodeReview.create_tasks(request.input_text)
+        
+        elif request.scenario == "research":
+            tasks = ParallelResearch.create_tasks(
+                request.input_text,
+                aspects=request.aspects
+            )
+        
+        elif request.scenario == "consensus":
+            tasks = ConsensusGenerator.create_tasks(
+                request.input_text,
+                num_generations=request.num_generations or 5
+            )
+        
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"不支持的场景类型: {request.scenario}"
+            )
+        
+        # 执行并行任务
+        result = agent.execute_parallel(
+            tasks,
+            strategy=ParallelStrategy(request.strategy),
+            aggregation=AggregationMethod(request.aggregation),
+            batch_size=request.batch_size
+        )
+        
+        return {
+            "success": result.success_count > 0,
+            "aggregated_result": result.aggregated_result,
+            "total_time": result.total_time,
+            "parallel_time": result.parallel_time,
+            "success_count": result.success_count,
+            "failed_count": result.failed_count,
+            "strategy": result.strategy,
+            "aggregation_method": result.aggregation_method,
+            "task_results": [
+                {
+                    "task_name": r.task_name,
+                    "output": r.output,
+                    "success": r.success,
+                    "execution_time": r.execution_time,
+                    "error_message": r.error_message
+                }
+                for r in result.task_results
+            ]
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"执行并行任务失败: {str(e)}")
+
+
+@app.post("/api/parallelization/execute/stream")
+async def execute_parallelization_stream(request: ParallelizationRequest):
+    """执行并行化任务（流式，实时返回进度）"""
+    
+    async def generate():
+        try:
+            agent = get_parallelization_agent(request.max_workers)
+            
+            # 根据场景创建任务
+            tasks = []
+            
+            if request.scenario == "multi_perspective":
+                tasks = MultiPerspectiveAnalysis.create_tasks(
+                    request.input_text,
+                    perspectives=request.perspectives
+                )
+            elif request.scenario == "translation":
+                tasks = ParallelTranslation.create_tasks(
+                    request.input_text,
+                    target_languages=request.languages
+                )
+            elif request.scenario == "content_gen":
+                tasks = ParallelContentGeneration.create_tasks(
+                    request.input_text,
+                    sections=request.sections
+                )
+            elif request.scenario == "code_review":
+                tasks = ParallelCodeReview.create_tasks(request.input_text)
+            elif request.scenario == "research":
+                tasks = ParallelResearch.create_tasks(
+                    request.input_text,
+                    aspects=request.aspects
+                )
+            elif request.scenario == "consensus":
+                tasks = ConsensusGenerator.create_tasks(
+                    request.input_text,
+                    num_generations=request.num_generations or 5
+                )
+            else:
+                yield f"data: {json.dumps({'error': f'不支持的场景类型: {request.scenario}', 'done': True}, ensure_ascii=False)}\n\n"
+                return
+            
+            # 发送任务信息
+            yield f"data: {json.dumps({'type': 'info', 'total_tasks': len(tasks), 'scenario': request.scenario}, ensure_ascii=False)}\n\n"
+            
+            # 执行并行任务（这里我们使用一个简单的包装来发送进度）
+            import time
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            
+            def execute_task_with_progress(task):
+                start_time = time.time()
+                try:
+                    output = task.handler(task.input_data, agent.llm_client)
+                    execution_time = time.time() - start_time
+                    return {
+                        "task_name": task.name,
+                        "output": output,
+                        "success": True,
+                        "execution_time": execution_time,
+                        "error_message": ""
+                    }
+                except Exception as e:
+                    execution_time = time.time() - start_time
+                    return {
+                        "task_name": task.name,
+                        "output": None,
+                        "success": False,
+                        "execution_time": execution_time,
+                        "error_message": str(e)
+                    }
+            
+            task_results = []
+            parallel_start = time.time()
+            
+            with ThreadPoolExecutor(max_workers=request.max_workers) as executor:
+                future_to_task = {
+                    executor.submit(execute_task_with_progress, task): task
+                    for task in tasks
+                }
+                
+                for future in as_completed(future_to_task):
+                    result = future.result()
+                    task_results.append(result)
+                    
+                    # 发送任务完成事件
+                    yield f"data: {json.dumps({'type': 'task_complete', 'task_name': result['task_name'], 'success': result['success'], 'completed': len(task_results), 'total': len(tasks)}, ensure_ascii=False)}\n\n"
+            
+            parallel_time = time.time() - parallel_start
+            
+            # 聚合结果
+            from src.shuyixiao_agent.agents.parallelization_agent import TaskResult
+            
+            task_result_objects = [
+                TaskResult(
+                    task_name=r["task_name"],
+                    output=r["output"],
+                    success=r["success"],
+                    execution_time=r["execution_time"],
+                    error_message=r["error_message"]
+                )
+                for r in task_results
+            ]
+            
+            aggregated = agent._aggregate_results(
+                task_result_objects,
+                AggregationMethod(request.aggregation)
+            )
+            
+            total_time = time.time() - parallel_start
+            success_count = sum(1 for r in task_results if r["success"])
+            
+            # 发送最终结果
+            yield f"data: {json.dumps({'type': 'done', 'aggregated_result': aggregated, 'total_time': total_time, 'parallel_time': parallel_time, 'success_count': success_count, 'task_results': task_results}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_msg = f"执行并行任务失败: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg, 'done': True}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/parallelization/scenarios")
+async def get_parallelization_scenarios():
+    """获取所有可用的并行化场景"""
+    return {
+        "scenarios": [
+            {
+                "id": "multi_perspective",
+                "name": "多角度分析",
+                "description": "从多个角度同时分析同一问题",
+                "default_perspectives": [
+                    "技术角度",
+                    "商业角度",
+                    "用户体验角度",
+                    "风险和挑战角度",
+                    "创新和机会角度"
+                ],
+                "input_hint": "请输入要分析的主题或问题"
+            },
+            {
+                "id": "translation",
+                "name": "并行翻译",
+                "description": "同时将文本翻译成多种语言",
+                "default_languages": ["英语", "日语", "法语", "德语", "西班牙语"],
+                "input_hint": "请输入要翻译的文本"
+            },
+            {
+                "id": "content_gen",
+                "name": "并行内容生成",
+                "description": "同时生成文档的不同章节",
+                "default_sections": [
+                    "简介和背景",
+                    "核心概念",
+                    "实践示例",
+                    "最佳实践",
+                    "常见问题"
+                ],
+                "input_hint": "请输入文档主题"
+            },
+            {
+                "id": "code_review",
+                "name": "并行代码审查",
+                "description": "从多个维度同时审查代码",
+                "aspects": [
+                    "代码质量",
+                    "性能分析",
+                    "安全检查",
+                    "最佳实践",
+                    "测试建议"
+                ],
+                "input_hint": "请粘贴要审查的代码"
+            },
+            {
+                "id": "research",
+                "name": "并行研究",
+                "description": "同时研究问题的不同方面",
+                "default_aspects": [
+                    "历史背景和发展",
+                    "当前状态和趋势",
+                    "主要方法和技术",
+                    "实际应用案例",
+                    "未来展望和挑战"
+                ],
+                "input_hint": "请输入研究问题"
+            },
+            {
+                "id": "consensus",
+                "name": "共识生成",
+                "description": "通过多次生成寻找最佳答案",
+                "num_generations": 5,
+                "input_hint": "请输入问题或提示词"
+            }
+        ],
+        "strategies": [
+            {
+                "id": "full_parallel",
+                "name": "全并行（推荐）",
+                "description": "所有任务同时执行，最大化并行效率"
+            },
+            {
+                "id": "batch_parallel",
+                "name": "批量并行",
+                "description": "将任务分批执行，控制资源使用"
+            },
+            {
+                "id": "pipeline",
+                "name": "流水线",
+                "description": "考虑任务依赖关系，分阶段并行"
+            },
+            {
+                "id": "vote",
+                "name": "投票",
+                "description": "多个相同任务并行，结果投票决定"
+            },
+            {
+                "id": "ensemble",
+                "name": "集成",
+                "description": "多个不同方法并行，结果融合"
+            }
+        ],
+        "aggregation_methods": [
+            {
+                "id": "merge",
+                "name": "合并",
+                "description": "将所有结果合并到字典"
+            },
+            {
+                "id": "concat",
+                "name": "连接",
+                "description": "将所有结果连接成文本"
+            },
+            {
+                "id": "first",
+                "name": "第一个",
+                "description": "使用第一个完成的结果"
+            },
+            {
+                "id": "best",
+                "name": "最佳",
+                "description": "选择质量最高的结果"
+            },
+            {
+                "id": "summarize",
+                "name": "总结（推荐）",
+                "description": "使用LLM总结所有结果"
+            },
+            {
+                "id": "vote",
+                "name": "投票",
+                "description": "选择最常见的结果"
+            },
+            {
+                "id": "consensus",
+                "name": "共识",
+                "description": "使用LLM寻找共识"
             }
         ]
     }

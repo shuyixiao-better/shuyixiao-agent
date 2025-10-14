@@ -127,7 +127,7 @@ class PromptChainingAgent:
                     print(f"\n📝 提示词:\n{prompt}\n")
                 
                 # 调用 LLM
-                response = self.llm_client.chat(prompt)
+                response = self.llm_client.simple_chat(prompt)
                 
                 # 应用转换函数（如果有）
                 if step.transform_fn:

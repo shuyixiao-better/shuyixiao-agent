@@ -731,6 +731,7 @@
             <button class="tab" onclick="switchTab('knowledge')">🗄️ 知识库管理</button>
             <button class="tab" onclick="switchTab('prompting')">🔗 Prompt Chaining</button>
             <button class="tab" onclick="switchTab('routing')">🎯 Routing Agent</button>
+            <button class="tab" onclick="switchTab('parallelization')">🚀 Parallelization Agent</button>
         </div>
 
         <div class="content">
@@ -1035,6 +1036,131 @@
                             当前场景下的所有可用路由和说明
                         </p>
                         <div id="availableRoutes"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parallelization Agent 标签页 -->
+            <div id="parallelizationTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>🚀 Parallelization Agent - 并行化智能体</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            同时执行多个任务，通过并行处理提高效率、获得多角度视角，提升结果质量
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>选择场景：</label>
+                                <select id="parallelScenario" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateParallelScenarioInfo()">
+                                    <option value="">-- 请选择一个场景 --</option>
+                                    <option value="multi_perspective">🔍 多角度分析 - 从多个角度分析问题</option>
+                                    <option value="translation">🌍 并行翻译 - 同时翻译成多种语言</option>
+                                    <option value="content_gen">📝 并行内容生成 - 同时生成文档各章节</option>
+                                    <option value="code_review">👨‍💻 并行代码审查 - 多维度代码审查</option>
+                                    <option value="research">🔬 并行研究 - 研究问题的多个方面</option>
+                                    <option value="consensus">🤝 共识生成 - 多次生成寻找最佳答案</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>并行策略：</label>
+                                <select id="parallelStrategy" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="full_parallel">🌐 全并行（推荐）</option>
+                                    <option value="batch_parallel">📦 批量并行</option>
+                                    <option value="pipeline">🔀 流水线</option>
+                                    <option value="vote">🗳️ 投票</option>
+                                    <option value="ensemble">🎯 集成</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>聚合方法：</label>
+                                <select id="parallelAggregation" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="summarize">📊 总结（推荐）</option>
+                                    <option value="merge">🔗 合并</option>
+                                    <option value="concat">📝 连接</option>
+                                    <option value="consensus">🤝 共识</option>
+                                    <option value="vote">🗳️ 投票</option>
+                                    <option value="best">⭐ 最佳</option>
+                                    <option value="first">⚡ 第一个</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 场景信息 -->
+                        <div id="parallelScenarioInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">场景信息</h4>
+                            <div id="parallelDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="parallelHint" style="font-size: 13px; color: #6c757d; font-style: italic;"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label id="parallelInputLabel">输入内容：</label>
+                            <textarea id="parallelInput" placeholder="请先选择一个场景..." rows="6" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical;"></textarea>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" onclick="executeParallelization()" id="parallelExecuteBtn" style="flex: 1;">
+                                <span>🚀 执行并行任务</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="clearParallelResult()">
+                                🗑️ 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 执行进度 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="parallelProgressCard">
+                        <h3>⏳ 执行进度</h3>
+                        <div id="parallelProgressInfo" style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span id="parallelProgressText" style="font-size: 14px; color: #495057;">正在并行执行任务...</span>
+                                <span id="parallelProgressCount" style="font-size: 13px; color: #6c757d;">0 / 0</span>
+                            </div>
+                            <div style="background: #e9ecef; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div id="parallelProgressBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 任务完成状态 -->
+                        <div id="parallelTaskStatus" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;"></div>
+                    </div>
+
+                    <!-- 执行结果 -->
+                    <div class="rag-card" style="grid-column: 1 / -1; display: none;" id="parallelResultCard">
+                        <h3>📊 执行结果</h3>
+                        
+                        <!-- 性能统计 -->
+                        <div id="parallelStats" style="background: #e7f5ff; padding: 16px; border-radius: 8px; margin-bottom: 20px;"></div>
+                        
+                        <!-- 聚合结果 -->
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">✨ 聚合结果</h4>
+                            <div id="parallelAggregatedResult" class="markdown-content"></div>
+                        </div>
+                        
+                        <!-- 各任务详细结果（可折叠） -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h4 style="margin: 0; color: #495057;">📋 各任务详细结果</h4>
+                                <button class="btn btn-sm btn-secondary" onclick="toggleAllParallelTasks()" id="toggleAllTasksBtn">
+                                    展开全部
+                                </button>
+                            </div>
+                            <div id="parallelTaskResults"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px; margin-top: 16px;">
+                            <button class="btn btn-secondary" onclick="copyParallelResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadParallelResult()">
+                                💾 下载结果
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2701,6 +2827,392 @@
                     console.error('复制失败:', err);
                     alert('复制失败，请手动复制');
                 });
+        }
+
+        // ==================== Parallelization Agent 相关函数 ====================
+
+        let parallelScenarios = [];
+        let parallelStrategies = [];
+        let parallelAggregationMethods = [];
+        let currentParallelResult = null;
+        let parallelTasksExpanded = false;
+
+        // 页面加载时加载并行化场景
+        window.addEventListener('load', async () => {
+            try {
+                await loadParallelizationScenarios();
+            } catch (error) {
+                console.error('加载并行化场景失败:', error);
+            }
+        });
+
+        // 加载并行化场景
+        async function loadParallelizationScenarios() {
+            try {
+                const response = await fetch(`${API_BASE}/api/parallelization/scenarios`);
+                const data = await response.json();
+                
+                parallelScenarios = data.scenarios;
+                parallelStrategies = data.strategies;
+                parallelAggregationMethods = data.aggregation_methods;
+                
+                console.log('已加载并行化场景:', parallelScenarios);
+                
+            } catch (error) {
+                console.error('加载并行化场景失败:', error);
+            }
+        }
+
+        // 更新场景信息
+        function updateParallelScenarioInfo() {
+            const scenarioSelect = document.getElementById('parallelScenario');
+            const scenarioId = scenarioSelect.value;
+            const infoDiv = document.getElementById('parallelScenarioInfo');
+            const inputTextarea = document.getElementById('parallelInput');
+            const executeBtn = document.getElementById('parallelExecuteBtn');
+            
+            if (!scenarioId) {
+                infoDiv.style.display = 'none';
+                inputTextarea.placeholder = '请先选择一个场景...';
+                executeBtn.disabled = true;
+                return;
+            }
+            
+            const scenario = parallelScenarios.find(s => s.id === scenarioId);
+            if (!scenario) return;
+            
+            // 显示场景信息
+            infoDiv.style.display = 'block';
+            document.getElementById('parallelDescription').textContent = scenario.description;
+            document.getElementById('parallelHint').innerHTML = `💡 ${scenario.input_hint}`;
+            
+            // 更新输入框提示
+            inputTextarea.placeholder = scenario.input_hint;
+            executeBtn.disabled = false;
+        }
+
+        // 执行并行化任务
+        async function executeParallelization() {
+            const scenarioId = document.getElementById('parallelScenario').value;
+            const inputText = document.getElementById('parallelInput').value.trim();
+            const strategy = document.getElementById('parallelStrategy').value;
+            const aggregation = document.getElementById('parallelAggregation').value;
+            const executeBtn = document.getElementById('parallelExecuteBtn');
+            const progressCard = document.getElementById('parallelProgressCard');
+            const resultCard = document.getElementById('parallelResultCard');
+            
+            if (!scenarioId) {
+                alert('请先选择一个场景');
+                return;
+            }
+            
+            if (!inputText) {
+                alert('请输入内容');
+                return;
+            }
+            
+            // 显示进度卡片
+            progressCard.style.display = 'block';
+            resultCard.style.display = 'none';
+            
+            // 重置进度
+            document.getElementById('parallelProgressBar').style.width = '0%';
+            document.getElementById('parallelProgressCount').textContent = '0 / 0';
+            document.getElementById('parallelTaskStatus').innerHTML = '';
+            
+            // 禁用按钮
+            executeBtn.disabled = true;
+            executeBtn.innerHTML = '<span>⏳ 执行中...</span>';
+            
+            try {
+                // 使用流式 API
+                const response = await fetch(`${API_BASE}/api/parallelization/execute/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scenario: scenarioId,
+                        input_text: inputText,
+                        strategy: strategy,
+                        aggregation: aggregation,
+                        max_workers: 5,
+                        batch_size: 3
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('请求失败');
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let totalTasks = 0;
+                let completedTasks = 0;
+                let taskResults = [];
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+                    
+                    for (const line of lines) {
+                        if (!line.trim() || !line.startsWith('data: ')) continue;
+                        
+                        try {
+                            const data = JSON.parse(line.slice(6));
+                            
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            
+                            if (data.type === 'info') {
+                                // 初始化信息
+                                totalTasks = data.total_tasks;
+                                document.getElementById('parallelProgressCount').textContent = `0 / ${totalTasks}`;
+                                document.getElementById('parallelProgressText').textContent = `正在并行执行 ${totalTasks} 个任务...`;
+                                
+                            } else if (data.type === 'task_complete') {
+                                // 任务完成
+                                completedTasks = data.completed;
+                                const progress = (completedTasks / totalTasks * 100).toFixed(0);
+                                document.getElementById('parallelProgressBar').style.width = progress + '%';
+                                document.getElementById('parallelProgressCount').textContent = `${completedTasks} / ${totalTasks}`;
+                                
+                                // 更新任务状态
+                                const statusDiv = document.getElementById('parallelTaskStatus');
+                                const taskStatusItem = document.createElement('div');
+                                taskStatusItem.style.cssText = 'background: ' + (data.success ? '#d1fae5' : '#fee2e2') + '; padding: 8px 12px; border-radius: 6px; border: 2px solid ' + (data.success ? '#10b981' : '#ef4444') + ';';
+                                taskStatusItem.innerHTML = `
+                                    <div style="font-size: 12px; font-weight: 600; color: ${data.success ? '#065f46' : '#991b1b'};">
+                                        ${data.success ? '✅' : '❌'} ${data.task_name}
+                                    </div>
+                                `;
+                                statusDiv.appendChild(taskStatusItem);
+                                
+                            } else if (data.type === 'done') {
+                                // 全部完成
+                                document.getElementById('parallelProgressText').textContent = '✅ 并行执行完成';
+                                document.getElementById('parallelProgressBar').style.width = '100%';
+                                
+                                // 显示结果卡片
+                                resultCard.style.display = 'block';
+                                
+                                // 显示性能统计
+                                const statsDiv = document.getElementById('parallelStats');
+                                const speedup = data.success_count > 0 ? (data.total_time / (data.parallel_time || 1)).toFixed(2) : '1.00';
+                                statsDiv.innerHTML = `
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                                        <div>
+                                            <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">总耗时</div>
+                                            <div style="font-size: 20px; font-weight: 600; color: #667eea;">${data.total_time.toFixed(2)}s</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">并行耗时</div>
+                                            <div style="font-size: 20px; font-weight: 600; color: #10b981;">${data.parallel_time.toFixed(2)}s</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">加速比</div>
+                                            <div style="font-size: 20px; font-weight: 600; color: #f59e0b;">${speedup}x</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px; color: #6c757d; margin-bottom: 4px;">成功/失败</div>
+                                            <div style="font-size: 20px; font-weight: 600; color: #495057;">${data.success_count} / ${totalTasks - data.success_count}</div>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // 显示聚合结果
+                                const aggregatedDiv = document.getElementById('parallelAggregatedResult');
+                                if (typeof marked !== 'undefined' && typeof data.aggregated_result === 'string') {
+                                    const html = marked.parse(data.aggregated_result);
+                                    aggregatedDiv.innerHTML = DOMPurify.sanitize(html);
+                                } else {
+                                    aggregatedDiv.textContent = typeof data.aggregated_result === 'string' ? data.aggregated_result : JSON.stringify(data.aggregated_result, null, 2);
+                                }
+                                
+                                // 显示各任务详细结果
+                                const taskResultsDiv = document.getElementById('parallelTaskResults');
+                                taskResultsDiv.innerHTML = '';
+                                
+                                data.task_results.forEach((result, index) => {
+                                    const taskCard = document.createElement('div');
+                                    taskCard.style.cssText = 'background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 2px solid ' + (result.success ? '#dee2e6' : '#ef4444') + ';';
+                                    
+                                    const contentId = `task-content-${index}`;
+                                    const isExpanded = parallelTasksExpanded;
+                                    
+                                    taskCard.innerHTML = `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleParallelTask('${contentId}')">
+                                            <div>
+                                                <h4 style="margin: 0 0 4px 0; color: #495057; font-size: 15px;">
+                                                    ${result.success ? '✅' : '❌'} ${result.task_name}
+                                                </h4>
+                                                <div style="font-size: 12px; color: #6c757d;">
+                                                    耗时: ${result.execution_time.toFixed(2)}s
+                                                    ${result.error_message ? ` | 错误: ${result.error_message}` : ''}
+                                                </div>
+                                            </div>
+                                            <span id="${contentId}-toggle" style="font-size: 18px; color: #6c757d;">
+                                                ${isExpanded ? '▼' : '▶'}
+                                            </span>
+                                        </div>
+                                        <div id="${contentId}" class="markdown-content" style="display: ${isExpanded ? 'block' : 'none'}; margin-top: 12px; padding-top: 12px; border-top: 1px solid #dee2e6; font-size: 13px;">
+                                            ${result.success && result.output ? (typeof marked !== 'undefined' ? DOMPurify.sanitize(marked.parse(result.output)) : result.output) : (result.error_message || '执行失败')}
+                                        </div>
+                                    `;
+                                    
+                                    taskResultsDiv.appendChild(taskCard);
+                                });
+                                
+                                // 保存结果
+                                currentParallelResult = {
+                                    scenario: scenarioId,
+                                    aggregated_result: data.aggregated_result,
+                                    task_results: data.task_results,
+                                    total_time: data.total_time,
+                                    parallel_time: data.parallel_time,
+                                    success_count: data.success_count
+                                };
+                                
+                                // 滚动到结果
+                                resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                        } catch (e) {
+                            console.error('解析SSE数据失败:', e);
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('执行失败:', error);
+                alert('执行失败: ' + error.message);
+                
+            } finally {
+                // 恢复按钮
+                executeBtn.disabled = false;
+                executeBtn.innerHTML = '<span>🚀 执行并行任务</span>';
+            }
+        }
+
+        // 切换单个任务的展开/折叠
+        function toggleParallelTask(contentId) {
+            const contentDiv = document.getElementById(contentId);
+            const toggleSpan = document.getElementById(contentId + '-toggle');
+            
+            if (contentDiv.style.display === 'none') {
+                contentDiv.style.display = 'block';
+                toggleSpan.textContent = '▼';
+            } else {
+                contentDiv.style.display = 'none';
+                toggleSpan.textContent = '▶';
+            }
+        }
+
+        // 切换所有任务的展开/折叠
+        function toggleAllParallelTasks() {
+            parallelTasksExpanded = !parallelTasksExpanded;
+            const btn = document.getElementById('toggleAllTasksBtn');
+            btn.textContent = parallelTasksExpanded ? '折叠全部' : '展开全部';
+            
+            // 切换所有任务
+            document.querySelectorAll('#parallelTaskResults [id^="task-content-"]').forEach(div => {
+                if (div.id.endsWith('-toggle')) return;
+                div.style.display = parallelTasksExpanded ? 'block' : 'none';
+                
+                const toggleSpan = document.getElementById(div.id + '-toggle');
+                if (toggleSpan) {
+                    toggleSpan.textContent = parallelTasksExpanded ? '▼' : '▶';
+                }
+            });
+        }
+
+        // 清除结果
+        function clearParallelResult() {
+            document.getElementById('parallelProgressCard').style.display = 'none';
+            document.getElementById('parallelResultCard').style.display = 'none';
+            document.getElementById('parallelInput').value = '';
+            document.getElementById('parallelProgressBar').style.width = '0%';
+            document.getElementById('parallelTaskStatus').innerHTML = '';
+            document.getElementById('parallelAggregatedResult').innerHTML = '';
+            document.getElementById('parallelTaskResults').innerHTML = '';
+            currentParallelResult = null;
+            parallelTasksExpanded = false;
+        }
+
+        // 复制结果
+        function copyParallelResult() {
+            if (!currentParallelResult) {
+                alert('没有可复制的结果');
+                return;
+            }
+            
+            const text = typeof currentParallelResult.aggregated_result === 'string' 
+                ? currentParallelResult.aggregated_result 
+                : JSON.stringify(currentParallelResult.aggregated_result, null, 2);
+            
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert('✅ 结果已复制到剪贴板');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                    alert('复制失败，请手动复制');
+                });
+        }
+
+        // 下载结果
+        function downloadParallelResult() {
+            if (!currentParallelResult) {
+                alert('没有可下载的结果');
+                return;
+            }
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `parallel_result_${currentParallelResult.scenario}_${timestamp}.md`;
+            
+            let content = `# 并行化执行结果\n\n`;
+            content += `**场景:** ${currentParallelResult.scenario}\n`;
+            content += `**生成时间:** ${new Date().toLocaleString('zh-CN')}\n`;
+            content += `**总耗时:** ${currentParallelResult.total_time.toFixed(2)}s\n`;
+            content += `**并行耗时:** ${currentParallelResult.parallel_time.toFixed(2)}s\n`;
+            content += `**成功任务:** ${currentParallelResult.success_count}\n\n`;
+            content += `---\n\n`;
+            content += `## 聚合结果\n\n`;
+            content += typeof currentParallelResult.aggregated_result === 'string' 
+                ? currentParallelResult.aggregated_result 
+                : JSON.stringify(currentParallelResult.aggregated_result, null, 2);
+            content += `\n\n---\n\n`;
+            content += `## 各任务详细结果\n\n`;
+            
+            currentParallelResult.task_results.forEach((result, index) => {
+                content += `### ${index + 1}. ${result.task_name}\n\n`;
+                content += `**状态:** ${result.success ? '✅ 成功' : '❌ 失败'}\n`;
+                content += `**耗时:** ${result.execution_time.toFixed(2)}s\n\n`;
+                if (result.success && result.output) {
+                    content += result.output + '\n\n';
+                } else if (result.error_message) {
+                    content += `**错误:** ${result.error_message}\n\n`;
+                }
+                content += `---\n\n`;
+            });
+            
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('已下载结果到:', filename);
         }
     </script>
 </body>
