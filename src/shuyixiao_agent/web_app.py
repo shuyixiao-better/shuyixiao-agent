@@ -54,6 +54,14 @@ from .agents.reflection_agent import (
     AnalysisReflection,
     TranslationReflection
 )
+from .agents.tool_use_agent import (
+    ToolUseAgent,
+    ToolType,
+    ToolDefinition,
+    ToolParameter,
+    ToolExecutionResult
+)
+from .tools.predefined_tools import PredefinedToolsRegistry
 from .tools.basic_tools import get_basic_tools
 from .config import settings
 from .gitee_ai_client import GiteeAIClient
@@ -357,6 +365,19 @@ class ReflectionRequest(BaseModel):
     expert_expertise: Optional[str] = None  # 用于 expert 策略
 
 
+class ToolUseRequest(BaseModel):
+    """Tool Use 请求模型"""
+    user_input: str
+    max_iterations: int = 5
+    tool_type: Optional[str] = None  # 可选的工具类型过滤
+
+
+class ToolExecuteRequest(BaseModel):
+    """工具执行请求模型"""
+    tool_name: str
+    parameters: Dict[str, Any]
+
+
 def get_agent(agent_type: str, system_message: Optional[str] = None):
     """获取或创建 Agent 实例"""
     cache_key = f"{agent_type}_{system_message or 'default'}"
@@ -378,6 +399,14 @@ def get_agent(agent_type: str, system_message: Optional[str] = None):
                     description=tool_info["description"],
                     parameters=tool_info["parameters"]
                 )
+            agents[cache_key] = agent
+        elif agent_type == "tool_use":
+            agent = ToolUseAgent(
+                llm_client=GiteeAIClient(),
+                verbose=True
+            )
+            # 注册所有预定义工具
+            PredefinedToolsRegistry.register_all_tools(agent)
             agents[cache_key] = agent
         else:
             raise ValueError(f"未知的 agent 类型: {agent_type}")
@@ -2004,6 +2033,255 @@ async def get_reflection_scenarios():
             "max_iterations": 3,
             "score_threshold": 0.85
         }
+    }
+
+
+# ==================== Tool Use Agent API ====================
+
+@app.post("/api/tool-use/execute")
+async def execute_tool_use_request(request: ToolUseRequest):
+    """执行Tool Use请求"""
+    try:
+        agent = get_agent("tool_use")
+        
+        # 如果指定了工具类型，可以进行过滤（这里简化处理）
+        result = await agent.process_request(
+            user_input=request.user_input,
+            max_iterations=request.max_iterations
+        )
+        
+        return {
+            "success": result["success"],
+            "message": result["message"],
+            "results": result["results"],
+            "total_iterations": result.get("total_iterations", 0),
+            "execution_history": agent.get_execution_history()[-10:]  # 最近10条记录
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Tool Use执行失败: {str(e)}")
+
+
+@app.post("/api/tool-use/execute/stream")
+async def execute_tool_use_request_stream(request: ToolUseRequest):
+    """流式执行Tool Use请求"""
+    async def generate():
+        try:
+            agent = get_agent("tool_use")
+            
+            yield f"data: {json.dumps({'type': 'start', 'message': '开始处理请求'}, ensure_ascii=False)}\n\n"
+            
+            # 简化的流式处理，实际应该在agent中实现真正的流式
+            result = await agent.process_request(
+                user_input=request.user_input,
+                max_iterations=request.max_iterations
+            )
+            
+            # 逐步发送结果
+            for i, step_result in enumerate(result.get("results", []), 1):
+                yield f"data: {json.dumps({'type': 'step', 'step': i, 'result': step_result}, ensure_ascii=False)}\n\n"
+            
+            yield f"data: {json.dumps({'type': 'complete', 'final_result': result}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(generate(), media_type="text/plain")
+
+
+@app.post("/api/tool-use/execute-tool")
+async def execute_single_tool(request: ToolExecuteRequest):
+    """执行单个工具"""
+    try:
+        agent = get_agent("tool_use")
+        
+        result = await agent.execute_tool(
+            tool_name=request.tool_name,
+            parameters=request.parameters
+        )
+        
+        return {
+            "success": result.success,
+            "result": result.result,
+            "error_message": result.error_message,
+            "execution_time": result.execution_time,
+            "tool_name": result.tool_name,
+            "parameters": result.parameters
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"工具执行失败: {str(e)}")
+
+
+@app.get("/api/tool-use/tools")
+async def get_available_tools(tool_type: Optional[str] = None):
+    """获取可用工具列表"""
+    try:
+        agent = get_agent("tool_use")
+        
+        # 转换工具类型
+        filter_type = None
+        if tool_type:
+            try:
+                filter_type = ToolType(tool_type)
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"无效的工具类型: {tool_type}")
+        
+        tools = agent.get_available_tools(tool_type=filter_type)
+        
+        return {
+            "tools": tools,
+            "total_count": len(tools),
+            "tool_types": [t.value for t in ToolType]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取工具列表失败: {str(e)}")
+
+
+@app.get("/api/tool-use/history")
+async def get_tool_execution_history():
+    """获取工具执行历史"""
+    try:
+        agent = get_agent("tool_use")
+        
+        history = agent.get_execution_history()
+        statistics = agent.get_tool_statistics()
+        
+        return {
+            "history": history,
+            "statistics": statistics
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取执行历史失败: {str(e)}")
+
+
+@app.delete("/api/tool-use/history")
+async def clear_tool_execution_history():
+    """清除工具执行历史"""
+    try:
+        agent = get_agent("tool_use")
+        agent.clear_history()
+        
+        return {"message": "执行历史已清除"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清除历史失败: {str(e)}")
+
+
+@app.get("/api/tool-use/scenarios")
+async def get_tool_use_scenarios():
+    """获取Tool Use场景信息"""
+    return {
+        "scenarios": [
+            {
+                "id": "file_operations",
+                "name": "文件操作",
+                "description": "读取、写入、管理文件和目录",
+                "example_tasks": [
+                    "读取配置文件内容",
+                    "保存数据到文件",
+                    "列出目录中的文件",
+                    "获取文件信息"
+                ]
+            },
+            {
+                "id": "network_requests",
+                "name": "网络请求",
+                "description": "发送HTTP请求，获取网络数据",
+                "example_tasks": [
+                    "获取API数据",
+                    "检查网站状态",
+                    "提交表单数据",
+                    "测试网络连通性"
+                ]
+            },
+            {
+                "id": "data_processing",
+                "name": "数据处理",
+                "description": "解析、过滤、聚合各种格式的数据",
+                "example_tasks": [
+                    "解析JSON数据",
+                    "过滤符合条件的记录",
+                    "按字段聚合统计",
+                    "排序数据"
+                ]
+            },
+            {
+                "id": "system_monitoring",
+                "name": "系统监控",
+                "description": "获取系统信息和性能数据",
+                "example_tasks": [
+                    "查看CPU使用率",
+                    "检查内存状态",
+                    "获取磁盘信息",
+                    "列出运行进程"
+                ]
+            },
+            {
+                "id": "calculations",
+                "name": "计算工具",
+                "description": "数学计算、统计分析、单位转换",
+                "example_tasks": [
+                    "计算数学表达式",
+                    "统计数据分析",
+                    "单位换算",
+                    "科学计算"
+                ]
+            },
+            {
+                "id": "text_processing",
+                "name": "文本处理",
+                "description": "文本分析、搜索替换、格式化",
+                "example_tasks": [
+                    "分析文本统计",
+                    "搜索替换内容",
+                    "提取文本模式",
+                    "计算文本哈希"
+                ]
+            }
+        ],
+        "tool_types": [
+            {
+                "id": "file_operation",
+                "name": "文件操作",
+                "description": "文件和目录的读写操作"
+            },
+            {
+                "id": "network_request",
+                "name": "网络请求",
+                "description": "HTTP请求和网络通信"
+            },
+            {
+                "id": "data_processing",
+                "name": "数据处理",
+                "description": "数据解析、转换和分析"
+            },
+            {
+                "id": "system_info",
+                "name": "系统信息",
+                "description": "系统状态和性能监控"
+            },
+            {
+                "id": "calculation",
+                "name": "计算工具",
+                "description": "数学计算和统计分析"
+            },
+            {
+                "id": "text_processing",
+                "name": "文本处理",
+                "description": "文本分析和处理工具"
+            }
+        ],
+        "features": [
+            "🔧 智能工具选择：自动分析需求并选择最合适的工具",
+            "⚡ 高效执行：支持同步和异步工具执行",
+            "📊 执行追踪：详细记录每个工具的执行过程和结果",
+            "🔄 链式调用：支持多个工具协作完成复杂任务",
+            "🛠️ 丰富工具库：内置20+常用工具，覆盖多个领域",
+            "📈 统计分析：提供工具使用统计和性能分析"
+        ]
     }
 
 

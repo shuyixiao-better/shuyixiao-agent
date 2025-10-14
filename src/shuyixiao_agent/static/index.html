@@ -733,6 +733,7 @@
             <button class="tab" onclick="switchTab('routing')">🎯 Routing Agent</button>
             <button class="tab" onclick="switchTab('parallelization')">🚀 Parallelization Agent</button>
             <button class="tab" onclick="switchTab('reflection')">💭 Reflection Agent</button>
+            <button class="tab" onclick="switchTab('tooluse')">🔧 Tool Use Agent</button>
         </div>
 
         <div class="content">
@@ -1417,6 +1418,170 @@
                                 📜 查看完整历史
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tool Use Agent 标签页 -->
+            <div id="tooluseTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 场景选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>🔧 Tool Use Agent - 工具使用智能体</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            智能选择和执行工具来完成复杂任务。系统会分析用户需求，自动选择最合适的工具，并支持多工具协作完成复杂任务。
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>工具类型过滤：</label>
+                                <select id="toolTypeFilter" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateToolTypeInfo()">
+                                    <option value="">-- 所有工具类型 --</option>
+                                    <option value="file_operation">📁 文件操作</option>
+                                    <option value="network_request">🌐 网络请求</option>
+                                    <option value="data_processing">📊 数据处理</option>
+                                    <option value="system_info">💻 系统信息</option>
+                                    <option value="calculation">🧮 计算工具</option>
+                                    <option value="text_processing">📝 文本处理</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>最大迭代次数：</label>
+                                <select id="maxIterations" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="1">1次 - 单次工具调用</option>
+                                    <option value="3">3次 - 简单任务链</option>
+                                    <option value="5" selected>5次 - 复杂任务（推荐）</option>
+                                    <option value="10">10次 - 极复杂任务</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 工具类型信息 -->
+                        <div id="toolTypeInfo" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">工具类型信息</h4>
+                            <div id="toolTypeDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="toolTypeExamples" style="margin-bottom: 12px;"></div>
+                        </div>
+
+                        <!-- 快速场景选择 -->
+                        <div style="background: #e7f3ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+                            <h4 style="margin-bottom: 12px; color: #004085;">🚀 快速场景</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                                <button class="btn btn-outline" onclick="setQuickTask('读取config.json文件内容')" style="text-align: left; font-size: 13px;">
+                                    📁 读取配置文件
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickTask('获取https://api.github.com的状态')" style="text-align: left; font-size: 13px;">
+                                    🌐 检查API状态
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickTask('计算1到100的平均值')" style="text-align: left; font-size: 13px;">
+                                    🧮 数学计算
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickTask('获取当前系统CPU和内存使用情况')" style="text-align: left; font-size: 13px;">
+                                    💻 系统监控
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickTask('分析这段文本的字数和句子数：Hello world. This is a test.')" style="text-align: left; font-size: 13px;">
+                                    📝 文本分析
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickTask('将100米转换为英尺')" style="text-align: left; font-size: 13px;">
+                                    🔄 单位转换
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 输入区域 -->
+                        <div class="form-group">
+                            <label>任务描述：</label>
+                            <textarea 
+                                id="toolUseInput" 
+                                placeholder="请描述您需要完成的任务，例如：&#10;- 读取某个文件的内容&#10;- 获取某个网站的状态&#10;- 计算一些数据的统计信息&#10;- 分析文本内容&#10;- 转换单位或格式&#10;&#10;系统会自动选择合适的工具来完成您的任务。"
+                                style="width: 100%; height: 120px; padding: 15px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical;"
+                            ></textarea>
+                        </div>
+                        
+                        <!-- 执行按钮 -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button class="btn btn-primary" onclick="executeToolUse()" id="toolUseExecuteBtn">
+                                🔧 执行任务
+                            </button>
+                            <button class="btn btn-secondary" onclick="executeToolUseStream()" id="toolUseStreamBtn">
+                                📡 流式执行
+                            </button>
+                            <button class="btn btn-secondary" onclick="showAvailableTools()">
+                                🛠️ 查看可用工具
+                            </button>
+                            <button class="btn btn-secondary" onclick="showToolHistory()">
+                                📊 执行历史
+                            </button>
+                            <button class="btn btn-outline" onclick="clearToolUseResult()">
+                                🧹 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 进度显示 -->
+                    <div id="toolUseProgressCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">⚡ 执行进度</h4>
+                        <div style="background: #f8f9fa; border-radius: 8px; padding: 4px; margin-bottom: 16px;">
+                            <div id="toolUseProgressBar" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 8px; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div id="toolUseCurrentStep" style="color: #6c757d; font-size: 14px;">准备执行...</div>
+                    </div>
+
+                    <!-- 工具执行历史 -->
+                    <div id="toolUseHistoryCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">📋 执行步骤</h4>
+                        <div id="toolUseHistory" style="max-height: 400px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+
+                    <!-- 执行结果 -->
+                    <div id="toolUseResultCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">✅ 执行结果</h4>
+                        
+                        <!-- 统计信息 -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                            <div style="background: #d1f4e0; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #155724;" id="toolUseSuccess">-</div>
+                                <div style="font-size: 12px; color: #155724;">执行状态</div>
+                            </div>
+                            <div style="background: #cce7ff; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #004085;" id="toolUseIterations">-</div>
+                                <div style="font-size: 12px; color: #004085;">执行轮次</div>
+                            </div>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #856404;" id="toolUseToolsUsed">-</div>
+                                <div style="font-size: 12px; color: #856404;">使用工具</div>
+                            </div>
+                            <div style="background: #f8d7da; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #721c24;" id="toolUseTime">-</div>
+                                <div style="font-size: 12px; color: #721c24;">总耗时</div>
+                            </div>
+                        </div>
+
+                        <!-- 最终结果 -->
+                        <div style="background: #d1f4e0; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #155724;">🎯 最终结果</h4>
+                            <div id="toolUseFinalResult" class="markdown-content"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="copyToolUseResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadToolUseResult()">
+                                💾 下载结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="showToolUseHistory()">
+                                📜 查看详细历史
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 可用工具列表 -->
+                    <div id="availableToolsCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">🛠️ 可用工具</h4>
+                        <div id="availableToolsList" style="max-height: 500px; overflow-y: auto;" class="scrollbar"></div>
                     </div>
                 </div>
             </div>
@@ -3715,6 +3880,496 @@
         // 显示完整反思历史
         function showReflectionHistory() {
             const card = document.getElementById('reflectionHistoryCard');
+            if (card.style.display === 'none') {
+                card.style.display = 'block';
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // ==================== Tool Use Agent 功能 ====================
+        
+        let toolUseHistory = [];
+        let currentToolUseExecution = null;
+
+        // 设置快速任务
+        function setQuickTask(task) {
+            document.getElementById('toolUseInput').value = task;
+        }
+
+        // 更新工具类型信息
+        function updateToolTypeInfo() {
+            const toolType = document.getElementById('toolTypeFilter').value;
+            const infoDiv = document.getElementById('toolTypeInfo');
+            const descDiv = document.getElementById('toolTypeDescription');
+            const examplesDiv = document.getElementById('toolTypeExamples');
+            
+            if (!toolType) {
+                infoDiv.style.display = 'none';
+                return;
+            }
+            
+            const toolTypeInfo = {
+                'file_operation': {
+                    description: '文件和目录的读写操作工具',
+                    examples: ['读取文件内容', '写入文件', '列出目录', '获取文件信息']
+                },
+                'network_request': {
+                    description: 'HTTP请求和网络通信工具',
+                    examples: ['GET请求获取数据', 'POST提交数据', 'Ping测试连通性']
+                },
+                'data_processing': {
+                    description: '数据解析、转换和分析工具',
+                    examples: ['JSON解析', '数据过滤', '数据聚合', 'CSV处理']
+                },
+                'system_info': {
+                    description: '系统状态和性能监控工具',
+                    examples: ['CPU使用率', '内存信息', '磁盘空间', '进程列表']
+                },
+                'calculation': {
+                    description: '数学计算和统计分析工具',
+                    examples: ['数学表达式计算', '统计分析', '单位转换']
+                },
+                'text_processing': {
+                    description: '文本分析和处理工具',
+                    examples: ['文本统计', '搜索替换', '正则匹配', '哈希计算']
+                }
+            };
+            
+            const info = toolTypeInfo[toolType];
+            if (info) {
+                descDiv.textContent = info.description;
+                examplesDiv.innerHTML = '<strong>示例任务：</strong> ' + info.examples.join('、');
+                infoDiv.style.display = 'block';
+            }
+        }
+
+        // 执行Tool Use任务
+        async function executeToolUse() {
+            const input = document.getElementById('toolUseInput').value.trim();
+            if (!input) {
+                alert('请输入任务描述');
+                return;
+            }
+            
+            const maxIterations = parseInt(document.getElementById('maxIterations').value);
+            const toolType = document.getElementById('toolTypeFilter').value;
+            
+            const executeBtn = document.getElementById('toolUseExecuteBtn');
+            const streamBtn = document.getElementById('toolUseStreamBtn');
+            
+            executeBtn.disabled = true;
+            streamBtn.disabled = true;
+            executeBtn.textContent = '🔄 执行中...';
+            
+            // 显示进度
+            showToolUseProgress();
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/tool-use/execute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_input: input,
+                        max_iterations: maxIterations,
+                        tool_type: toolType || null
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayToolUseResult(data);
+                    displayToolUseHistory(data.results || []);
+                } else {
+                    throw new Error(data.message || '执行失败');
+                }
+                
+            } catch (error) {
+                console.error('Tool Use执行失败:', error);
+                alert(`执行失败: ${error.message}`);
+                hideToolUseProgress();
+            } finally {
+                executeBtn.disabled = false;
+                streamBtn.disabled = false;
+                executeBtn.textContent = '🔧 执行任务';
+            }
+        }
+
+        // 流式执行Tool Use任务
+        async function executeToolUseStream() {
+            const input = document.getElementById('toolUseInput').value.trim();
+            if (!input) {
+                alert('请输入任务描述');
+                return;
+            }
+            
+            const maxIterations = parseInt(document.getElementById('maxIterations').value);
+            const toolType = document.getElementById('toolTypeFilter').value;
+            
+            const executeBtn = document.getElementById('toolUseExecuteBtn');
+            const streamBtn = document.getElementById('toolUseStreamBtn');
+            
+            executeBtn.disabled = true;
+            streamBtn.disabled = true;
+            streamBtn.textContent = '📡 流式执行中...';
+            
+            // 显示进度
+            showToolUseProgress();
+            clearToolUseHistory();
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/tool-use/execute/stream`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_input: input,
+                        max_iterations: maxIterations,
+                        tool_type: toolType || null
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                handleToolUseStreamData(data);
+                            } catch (e) {
+                                console.warn('解析流数据失败:', e);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('流式执行失败:', error);
+                alert(`流式执行失败: ${error.message}`);
+                hideToolUseProgress();
+            } finally {
+                executeBtn.disabled = false;
+                streamBtn.disabled = false;
+                streamBtn.textContent = '📡 流式执行';
+            }
+        }
+
+        // 处理流式数据
+        function handleToolUseStreamData(data) {
+            switch (data.type) {
+                case 'start':
+                    updateToolUseProgress(0, data.message);
+                    break;
+                case 'step':
+                    updateToolUseProgress((data.step / 5) * 100, `第${data.step}步: ${data.result.tool_name}`);
+                    addToolUseHistoryItem(data.result);
+                    break;
+                case 'complete':
+                    updateToolUseProgress(100, '执行完成');
+                    displayToolUseResult(data.final_result);
+                    break;
+                case 'error':
+                    alert(`执行出错: ${data.message}`);
+                    hideToolUseProgress();
+                    break;
+            }
+        }
+
+        // 显示进度
+        function showToolUseProgress() {
+            document.getElementById('toolUseProgressCard').style.display = 'block';
+            document.getElementById('toolUseHistoryCard').style.display = 'block';
+            updateToolUseProgress(0, '准备执行...');
+        }
+
+        // 更新进度
+        function updateToolUseProgress(percent, message) {
+            document.getElementById('toolUseProgressBar').style.width = `${percent}%`;
+            document.getElementById('toolUseCurrentStep').textContent = message;
+        }
+
+        // 隐藏进度
+        function hideToolUseProgress() {
+            document.getElementById('toolUseProgressCard').style.display = 'none';
+        }
+
+        // 显示Tool Use结果
+        function displayToolUseResult(data) {
+            // 统计信息
+            document.getElementById('toolUseSuccess').textContent = data.success ? '成功' : '失败';
+            document.getElementById('toolUseIterations').textContent = data.total_iterations || 0;
+            
+            const toolsUsed = new Set();
+            (data.results || []).forEach(result => {
+                if (result.tool_name) toolsUsed.add(result.tool_name);
+            });
+            document.getElementById('toolUseToolsUsed').textContent = toolsUsed.size;
+            
+            const totalTime = (data.results || []).reduce((sum, result) => sum + (result.execution_time || 0), 0);
+            document.getElementById('toolUseTime').textContent = `${totalTime.toFixed(2)}s`;
+            
+            // 最终结果
+            let finalResult = data.message || '任务完成';
+            if (data.results && data.results.length > 0) {
+                const lastResult = data.results[data.results.length - 1];
+                if (lastResult.result) {
+                    finalResult = lastResult.result;
+                }
+            }
+            
+            if (typeof marked !== 'undefined' && typeof DOMPurify !== 'undefined') {
+                const rawHtml = marked.parse(String(finalResult));
+                const cleanHtml = DOMPurify.sanitize(rawHtml);
+                document.getElementById('toolUseFinalResult').innerHTML = cleanHtml;
+            } else {
+                document.getElementById('toolUseFinalResult').textContent = finalResult;
+            }
+            
+            // 显示结果卡片
+            document.getElementById('toolUseResultCard').style.display = 'block';
+            hideToolUseProgress();
+        }
+
+        // 显示Tool Use历史
+        function displayToolUseHistory(results) {
+            toolUseHistory = results;
+            const historyDiv = document.getElementById('toolUseHistory');
+            historyDiv.innerHTML = '';
+            
+            results.forEach((result, index) => {
+                addToolUseHistoryItem(result, index + 1);
+            });
+        }
+
+        // 添加历史项
+        function addToolUseHistoryItem(result, step) {
+            const historyDiv = document.getElementById('toolUseHistory');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.style.cssText = `
+                background: ${result.success ? '#d1f4e0' : '#f8d7da'};
+                border-left: 4px solid ${result.success ? '#28a745' : '#dc3545'};
+                padding: 16px;
+                margin-bottom: 12px;
+                border-radius: 8px;
+            `;
+            
+            const stepNum = step || toolUseHistory.length + 1;
+            const executionTime = result.execution_time ? `${result.execution_time.toFixed(2)}s` : '-';
+            
+            historyItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <h4 style="margin: 0; color: #495057;">步骤 ${stepNum}: ${result.tool_name}</h4>
+                    <span style="background: rgba(0,0,0,0.1); padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                        ${executionTime}
+                    </span>
+                </div>
+                <div style="margin: 8px 0; color: #6c757d; font-size: 14px;">
+                    <strong>推理:</strong> ${result.reasoning || '自动选择'}
+                </div>
+                <div style="margin: 8px 0; color: #6c757d; font-size: 14px;">
+                    <strong>参数:</strong> ${JSON.stringify(result.parameters || {})}
+                </div>
+                <div style="margin-top: 8px;">
+                    <strong style="color: #495057;">结果:</strong>
+                    <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 4px; margin-top: 4px; font-family: monospace; font-size: 13px; max-height: 200px; overflow-y: auto;">
+                        ${result.success ? String(result.result).substring(0, 500) : result.error_message}
+                        ${String(result.result || result.error_message || '').length > 500 ? '...' : ''}
+                    </div>
+                </div>
+            `;
+            
+            historyDiv.appendChild(historyItem);
+        }
+
+        // 清除Tool Use历史
+        function clearToolUseHistory() {
+            document.getElementById('toolUseHistory').innerHTML = '';
+            toolUseHistory = [];
+        }
+
+        // 清除Tool Use结果
+        function clearToolUseResult() {
+            toolUseHistory = [];
+            document.getElementById('toolUseProgressCard').style.display = 'none';
+            document.getElementById('toolUseHistoryCard').style.display = 'none';
+            document.getElementById('toolUseResultCard').style.display = 'none';
+            document.getElementById('availableToolsCard').style.display = 'none';
+            document.getElementById('toolUseProgressBar').style.width = '0%';
+            clearToolUseHistory();
+        }
+
+        // 复制Tool Use结果
+        function copyToolUseResult() {
+            const content = document.getElementById('toolUseFinalResult').textContent;
+            navigator.clipboard.writeText(content).then(() => {
+                alert('结果已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            });
+        }
+
+        // 下载Tool Use结果
+        function downloadToolUseResult() {
+            const content = document.getElementById('toolUseFinalResult').textContent;
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `tool_use_result_${timestamp}.md`;
+            
+            let fullContent = `# Tool Use Agent 执行结果\n\n`;
+            fullContent += `**生成时间**: ${new Date().toLocaleString('zh-CN')}\n\n`;
+            fullContent += `---\n\n`;
+            fullContent += `## 最终结果\n\n${content}\n\n`;
+            fullContent += `---\n\n`;
+            fullContent += `## 执行历史\n\n`;
+            
+            toolUseHistory.forEach((result, index) => {
+                fullContent += `### 步骤 ${index + 1}: ${result.tool_name}\n\n`;
+                fullContent += `**推理**: ${result.reasoning || '自动选择'}\n\n`;
+                fullContent += `**参数**: \`${JSON.stringify(result.parameters || {})}\`\n\n`;
+                fullContent += `**结果**: ${result.success ? result.result : result.error_message}\n\n`;
+                fullContent += `**执行时间**: ${result.execution_time ? result.execution_time.toFixed(2) + 's' : '-'}\n\n`;
+            });
+            
+            const blob = new Blob([fullContent], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            console.log('已下载Tool Use结果到:', filename);
+        }
+
+        // 显示可用工具
+        async function showAvailableTools() {
+            const toolType = document.getElementById('toolTypeFilter').value;
+            
+            try {
+                const url = `${API_BASE}/api/tool-use/tools${toolType ? `?tool_type=${toolType}` : ''}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayAvailableTools(data.tools);
+                
+            } catch (error) {
+                console.error('获取工具列表失败:', error);
+                alert(`获取工具列表失败: ${error.message}`);
+            }
+        }
+
+        // 显示可用工具列表
+        function displayAvailableTools(tools) {
+            const toolsDiv = document.getElementById('availableToolsList');
+            toolsDiv.innerHTML = '';
+            
+            tools.forEach(tool => {
+                const toolItem = document.createElement('div');
+                toolItem.style.cssText = `
+                    background: #f8f9fa;
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 16px;
+                    margin-bottom: 12px;
+                `;
+                
+                const parametersHtml = tool.parameters.map(param => {
+                    return `<li><strong>${param.name}</strong> (${param.type})${param.required ? ' [必需]' : ' [可选]'}: ${param.description}</li>`;
+                }).join('');
+                
+                const examplesHtml = tool.examples.length > 0 ? 
+                    `<div style="margin-top: 8px;"><strong>示例:</strong> ${tool.examples.join('、')}</div>` : '';
+                
+                toolItem.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                        <h4 style="margin: 0; color: #495057;">${tool.name}</h4>
+                        <span style="background: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                            ${tool.type}
+                        </span>
+                    </div>
+                    <div style="color: #6c757d; margin-bottom: 12px;">${tool.description}</div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>参数:</strong>
+                        <ul style="margin: 4px 0; padding-left: 20px; font-size: 13px;">${parametersHtml}</ul>
+                    </div>
+                    ${examplesHtml}
+                `;
+                
+                toolsDiv.appendChild(toolItem);
+            });
+            
+            document.getElementById('availableToolsCard').style.display = 'block';
+        }
+
+        // 显示工具历史
+        async function showToolHistory() {
+            try {
+                const response = await fetch(`${API_BASE}/api/tool-use/history`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                displayToolHistoryModal(data.history, data.statistics);
+                
+            } catch (error) {
+                console.error('获取工具历史失败:', error);
+                alert(`获取工具历史失败: ${error.message}`);
+            }
+        }
+
+        // 显示工具历史模态框
+        function displayToolHistoryModal(history, statistics) {
+            // 简化实现：使用alert显示统计信息
+            let message = `工具使用统计:\n`;
+            message += `总执行次数: ${statistics.total_executions}\n`;
+            message += `成功次数: ${statistics.successful_executions}\n`;
+            message += `失败次数: ${statistics.failed_executions}\n`;
+            message += `平均执行时间: ${statistics.average_execution_time?.toFixed(2)}s\n\n`;
+            
+            if (statistics.most_used_tools && statistics.most_used_tools.length > 0) {
+                message += `最常用工具:\n`;
+                statistics.most_used_tools.forEach(([tool, count]) => {
+                    message += `- ${tool}: ${count}次\n`;
+                });
+            }
+            
+            alert(message);
+        }
+
+        // 显示Tool Use历史详情
+        function showToolUseHistory() {
+            const card = document.getElementById('toolUseHistoryCard');
             if (card.style.display === 'none') {
                 card.style.display = 'block';
                 card.scrollIntoView({ behavior: 'smooth', block: 'start' });
