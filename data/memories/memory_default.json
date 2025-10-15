@@ -1,0 +1,24 @@
+{
+  "memories": [
+    {
+      "id": "d38bd3645d90ed8f02d0527868f81f4c",
+      "content": "我用英文问你你就要用英文回答我",
+      "memory_type": "semantic",
+      "importance": 3,
+      "timestamp": "2025-10-15T15:28:26.838845",
+      "last_accessed": "2025-10-15T15:28:26.838845",
+      "access_count": 0,
+      "tags": [
+        "用户偏好"
+      ],
+      "metadata": {},
+      "related_memories": []
+    }
+  ],
+  "session_context": [],
+  "working_memory": {},
+  "metadata": {
+    "saved_at": "2025-10-15T15:28:26.838845",
+    "total_memories": 1
+  }
+}

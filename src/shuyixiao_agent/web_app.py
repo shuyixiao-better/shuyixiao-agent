@@ -79,6 +79,13 @@ from .agents.multi_agent_collaboration import (
     ContentCreationTeam,
     BusinessConsultingTeam
 )
+from .agents.memory_agent import (
+    MemoryAgent,
+    MemoryType,
+    MemoryImportance,
+    MemoryStrategy,
+    Memory
+)
 from .tools.predefined_tools import PredefinedToolsRegistry
 from .tools.basic_tools import get_basic_tools
 from .config import settings
@@ -216,6 +223,9 @@ parallelization_agent: Optional[ParallelizationAgent] = None
 
 # Reflection Agent 实例缓存
 reflection_agent: Optional[ReflectionAgent] = None
+
+# Memory Agent 实例缓存
+memory_agents: Dict[str, MemoryAgent] = {}
 
 # 会话消息历史（简单实现，生产环境应使用数据库）
 session_histories: Dict[str, List[Dict[str, str]]] = {}
@@ -551,6 +561,28 @@ def get_reflection_agent(max_iterations: int = 3, score_threshold: float = 0.85)
         print(f"[信息] Reflection Agent 已创建 (max_iterations={max_iterations}, threshold={score_threshold})")
     
     return reflection_agent
+
+
+def get_memory_agent(session_id: str = "default", max_memories: int = 1000):
+    """获取或创建 Memory Agent 实例"""
+    cache_key = f"{session_id}_{max_memories}"
+    
+    if cache_key not in memory_agents:
+        llm_client = GiteeAIClient()
+        
+        # 为每个会话创建独立的存储路径
+        storage_path = f"data/memories/memory_{session_id}.json"
+        
+        memory_agents[cache_key] = MemoryAgent(
+            llm_client=llm_client,
+            max_memories=max_memories,
+            strategy=MemoryStrategy.HYBRID,
+            verbose=False,
+            storage_path=storage_path
+        )
+        print(f"[信息] Memory Agent 已创建 (session={session_id}, max_memories={max_memories})")
+    
+    return memory_agents[cache_key]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -2582,6 +2614,40 @@ class MultiAgentCollaborationRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
 
 
+class MemoryStoreRequest(BaseModel):
+    """存储记忆请求"""
+    content: str
+    memory_type: str = "semantic"
+    importance: int = 3
+    tags: Optional[List[str]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    session_id: str = "default"
+
+
+class MemoryRetrieveRequest(BaseModel):
+    """检索记忆请求"""
+    query: str
+    memory_types: Optional[List[str]] = None
+    tags: Optional[List[str]] = None
+    top_k: int = 5
+    min_importance: Optional[int] = None
+    session_id: str = "default"
+
+
+class MemoryChatRequest(BaseModel):
+    """基于记忆的对话请求"""
+    user_input: str
+    use_memory_types: Optional[List[str]] = None
+    session_id: str = "default"
+
+
+class WorkingMemoryUpdateRequest(BaseModel):
+    """工作记忆更新请求"""
+    key: str
+    value: Any
+    session_id: str = "default"
+
+
 @app.get("/api/multi-agent/teams")
 async def get_collaboration_teams():
     """获取可用的协作团队类型"""
@@ -2831,8 +2897,385 @@ async def multi_agent_collaborate_stream(request: MultiAgentCollaborationRequest
         raise HTTPException(status_code=500, detail=f"流式协作失败: {str(e)}")
 
 
+# ==================== Memory Management APIs ====================
+
+@app.post("/api/memory/store")
+async def store_memory(request: MemoryStoreRequest):
+    """存储新记忆"""
+    try:
+        agent = get_memory_agent(request.session_id)
+        
+        memory = agent.store_memory(
+            content=request.content,
+            memory_type=MemoryType(request.memory_type),
+            importance=MemoryImportance(request.importance),
+            tags=request.tags,
+            metadata=request.metadata
+        )
+        
+        return {
+            "success": True,
+            "memory": memory.to_dict(),
+            "message": "记忆已存储"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"存储记忆失败: {str(e)}")
+
+
+@app.post("/api/memory/retrieve")
+async def retrieve_memories(request: MemoryRetrieveRequest):
+    """检索相关记忆"""
+    try:
+        agent = get_memory_agent(request.session_id)
+        
+        # 转换记忆类型
+        memory_types = None
+        if request.memory_types:
+            memory_types = [MemoryType(mt) for mt in request.memory_types]
+        
+        # 转换重要性
+        min_importance = None
+        if request.min_importance is not None:
+            min_importance = MemoryImportance(request.min_importance)
+        
+        results = agent.retrieve_memories(
+            query=request.query,
+            memory_types=memory_types,
+            tags=request.tags,
+            top_k=request.top_k,
+            min_importance=min_importance
+        )
+        
+        return {
+            "success": True,
+            "results": [
+                {
+                    "memory": result.memory.to_dict(),
+                    "relevance_score": result.relevance_score,
+                    "reason": result.reason
+                }
+                for result in results
+            ],
+            "count": len(results)
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"检索记忆失败: {str(e)}")
+
+
+@app.post("/api/memory/chat")
+async def chat_with_memory(request: MemoryChatRequest):
+    """基于记忆的对话（非流式）"""
+    try:
+        agent = get_memory_agent(request.session_id)
+        
+        # 转换记忆类型
+        use_memory_types = None
+        if request.use_memory_types:
+            use_memory_types = [MemoryType(mt) for mt in request.use_memory_types]
+        
+        response = agent.chat_with_memory(
+            user_input=request.user_input,
+            use_memory_types=use_memory_types
+        )
+        
+        return {
+            "success": True,
+            "response": response,
+            "session_id": request.session_id
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"对话失败: {str(e)}")
+
+
+@app.post("/api/memory/chat/stream")
+async def chat_with_memory_stream(request: MemoryChatRequest):
+    """基于记忆的对话（流式）"""
+    
+    async def generate():
+        try:
+            agent = get_memory_agent(request.session_id)
+            
+            # 转换记忆类型
+            use_memory_types = None
+            if request.use_memory_types:
+                use_memory_types = [MemoryType(mt) for mt in request.use_memory_types]
+            
+            # 检索相关记忆
+            relevant_memories = agent.retrieve_memories(
+                query=request.user_input,
+                memory_types=use_memory_types,
+                top_k=5
+            )
+            
+            # 发送记忆信息
+            if relevant_memories:
+                memory_info = {
+                    "type": "memories",
+                    "memories": [
+                        {
+                            "content": result.memory.content,
+                            "type": result.memory.memory_type.value,
+                            "relevance": result.relevance_score
+                        }
+                        for result in relevant_memories
+                    ]
+                }
+                yield f"data: {json.dumps(memory_info, ensure_ascii=False)}\n\n"
+            
+            # 调用LLM并流式返回
+            response = agent.chat_with_memory(
+                user_input=request.user_input,
+                use_memory_types=use_memory_types
+            )
+            
+            # 逐字发送响应
+            for char in response:
+                yield f"data: {json.dumps({'type': 'content', 'content': char}, ensure_ascii=False)}\n\n"
+                await asyncio.sleep(0.01)  # 模拟流式效果
+            
+            yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+            
+        except Exception as e:
+            error_msg = f"对话失败: {str(e)}"
+            yield f"data: {json.dumps({'error': error_msg}, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.put("/api/memory/working")
+async def update_working_memory(request: WorkingMemoryUpdateRequest):
+    """更新工作记忆"""
+    try:
+        agent = get_memory_agent(request.session_id)
+        agent.update_working_memory(request.key, request.value)
+        
+        return {
+            "success": True,
+            "message": f"工作记忆已更新: {request.key}",
+            "working_memory": agent.working_memory
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新工作记忆失败: {str(e)}")
+
+
+@app.delete("/api/memory/working/{session_id}")
+async def clear_working_memory(session_id: str):
+    """清空工作记忆"""
+    try:
+        agent = get_memory_agent(session_id)
+        agent.clear_working_memory()
+        
+        return {
+            "success": True,
+            "message": "工作记忆已清空"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清空工作记忆失败: {str(e)}")
+
+
+@app.delete("/api/memory/session/{session_id}")
+async def clear_session_context(session_id: str):
+    """清空会话上下文"""
+    try:
+        agent = get_memory_agent(session_id)
+        agent.clear_session_context()
+        
+        return {
+            "success": True,
+            "message": "会话上下文已清空"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清空会话上下文失败: {str(e)}")
+
+
+@app.get("/api/memory/statistics/{session_id}")
+async def get_memory_statistics(session_id: str):
+    """获取记忆统计信息"""
+    try:
+        agent = get_memory_agent(session_id)
+        stats = agent.get_statistics()
+        
+        return {
+            "success": True,
+            "statistics": {
+                "total_memories": stats.total_memories,
+                "by_type": stats.by_type,
+                "by_importance": stats.by_importance,
+                "oldest_memory": stats.oldest_memory,
+                "newest_memory": stats.newest_memory,
+                "most_accessed": stats.most_accessed.to_dict() if stats.most_accessed else None,
+                "storage_size_bytes": stats.storage_size_bytes,
+                "storage_size_kb": round(stats.storage_size_bytes / 1024, 2)
+            }
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+
+
+@app.get("/api/memory/types/{session_id}/{memory_type}")
+async def get_memories_by_type(session_id: str, memory_type: str):
+    """获取指定类型的所有记忆"""
+    try:
+        agent = get_memory_agent(session_id)
+        memories = agent.get_memories_by_type(MemoryType(memory_type))
+        
+        return {
+            "success": True,
+            "memories": [m.to_dict() for m in memories],
+            "count": len(memories),
+            "memory_type": memory_type
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取记忆失败: {str(e)}")
+
+
+@app.get("/api/memory/tags/{session_id}/{tag}")
+async def get_memories_by_tag(session_id: str, tag: str):
+    """获取指定标签的所有记忆"""
+    try:
+        agent = get_memory_agent(session_id)
+        memories = agent.get_memories_by_tag(tag)
+        
+        return {
+            "success": True,
+            "memories": [m.to_dict() for m in memories],
+            "count": len(memories),
+            "tag": tag
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取记忆失败: {str(e)}")
+
+
+@app.get("/api/memory/info")
+async def get_memory_info():
+    """获取记忆管理系统信息"""
+    return {
+        "memory_types": [
+            {
+                "id": "short_term",
+                "name": "短期记忆",
+                "description": "最近的对话和交互",
+                "icon": "⚡"
+            },
+            {
+                "id": "long_term",
+                "name": "长期记忆",
+                "description": "重要的知识和经验",
+                "icon": "💾"
+            },
+            {
+                "id": "working",
+                "name": "工作记忆",
+                "description": "当前任务相关的临时信息",
+                "icon": "🔧"
+            },
+            {
+                "id": "semantic",
+                "name": "语义记忆",
+                "description": "事实和概念性知识",
+                "icon": "📚"
+            },
+            {
+                "id": "episodic",
+                "name": "情景记忆",
+                "description": "具体的事件和经历",
+                "icon": "📖"
+            },
+            {
+                "id": "procedural",
+                "name": "程序性记忆",
+                "description": "技能和操作步骤",
+                "icon": "⚙️"
+            }
+        ],
+        "importance_levels": [
+            {"value": 5, "name": "关键", "description": "必须保留"},
+            {"value": 4, "name": "高", "description": "应该保留"},
+            {"value": 3, "name": "中", "description": "可以保留"},
+            {"value": 2, "name": "低", "description": "可以遗忘"},
+            {"value": 1, "name": "最低", "description": "优先遗忘"}
+        ],
+        "strategies": [
+            {
+                "id": "fifo",
+                "name": "先进先出",
+                "description": "删除最早的记忆"
+            },
+            {
+                "id": "lru",
+                "name": "最近最少使用",
+                "description": "删除最少访问的记忆"
+            },
+            {
+                "id": "importance",
+                "name": "基于重要性",
+                "description": "优先删除不重要的记忆"
+            },
+            {
+                "id": "hybrid",
+                "name": "混合策略（推荐）",
+                "description": "综合考虑时间、重要性和访问频率"
+            }
+        ],
+        "features": [
+            "🧠 多层次记忆：支持短期、长期、工作记忆等多种类型",
+            "🔍 智能检索：根据相关性和重要性检索记忆",
+            "🔄 自动管理：自动整理、压缩、遗忘不重要的记忆",
+            "💾 持久化：记忆可以持久化存储，跨会话使用",
+            "🎯 上下文感知：根据当前任务动态调整记忆使用策略",
+            "📊 统计分析：提供详细的记忆使用统计和分析"
+        ]
+    }
+
+
+@app.post("/api/memory/export/{session_id}")
+async def export_memories(session_id: str, memory_types: Optional[List[str]] = None):
+    """导出记忆"""
+    try:
+        agent = get_memory_agent(session_id)
+        
+        # 转换记忆类型
+        types = None
+        if memory_types:
+            types = [MemoryType(mt) for mt in memory_types]
+        
+        # 导出到临时文件
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        export_path = f"data/memories/export_{session_id}_{timestamp}.json"
+        
+        agent.export_memories(export_path, types)
+        
+        return {
+            "success": True,
+            "message": "记忆已导出",
+            "export_path": export_path
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"导出记忆失败: {str(e)}")
+
+
 if __name__ == "__main__":
     import uvicorn
+    import asyncio
     uvicorn.run(
         "shuyixiao_agent.web_app:app",
         host="0.0.0.0",

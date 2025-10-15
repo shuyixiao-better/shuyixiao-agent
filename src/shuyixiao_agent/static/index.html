@@ -736,6 +736,7 @@
             <button class="tab" onclick="switchTab('tooluse')">🔧 Tool Use Agent</button>
             <button class="tab" onclick="switchTab('planning')">📋 Planning Agent</button>
             <button class="tab" onclick="switchTab('multiagent')">👥 Multi-Agent Collaboration</button>
+            <button class="tab" onclick="switchTab('memory')">🧠 Memory Management</button>
         </div>
 
         <div class="content">
@@ -2007,6 +2008,109 @@
                             <button class="btn btn-secondary" onclick="showCollaborationDetails()">
                                 📊 查看详情
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Management Agent 内容 -->
+            <div id="memoryTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>🧠 Memory Management Agent - 记忆管理</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            智能记忆管理系统 - 让AI拥有记忆能力，记住过去的对话、学习用户偏好、提供个性化服务
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 400px 1fr; gap: 20px;">
+                            <!-- 左侧：记忆管理面板 -->
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <!-- 存储新记忆 -->
+                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h4 style="margin-bottom: 15px; color: #667eea;">📝 存储新记忆</h4>
+                                    <textarea id="memoryContent" placeholder="输入记忆内容..." rows="3" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; margin-bottom: 10px;"></textarea>
+                                    
+                                    <div style="margin-bottom: 10px;">
+                                        <label style="font-size: 13px; color: #666; display: block; margin-bottom: 5px;">记忆类型:</label>
+                                        <select id="memoryType" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                                            <option value="semantic">📚 语义记忆 (事实知识)</option>
+                                            <option value="episodic">📖 情景记忆 (具体事件)</option>
+                                            <option value="long_term">💾 长期记忆 (用户偏好)</option>
+                                            <option value="short_term">⚡ 短期记忆 (临时信息)</option>
+                                            <option value="working">🔧 工作记忆 (任务相关)</option>
+                                            <option value="procedural">⚙️ 程序性记忆 (操作步骤)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 10px;">
+                                        <label style="font-size: 13px; color: #666; display: block; margin-bottom: 5px;">重要性:</label>
+                                        <select id="memoryImportance" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                                            <option value="5">⭐⭐⭐⭐⭐ 关键</option>
+                                            <option value="4">⭐⭐⭐⭐ 高</option>
+                                            <option value="3" selected>⭐⭐⭐ 中</option>
+                                            <option value="2">⭐⭐ 低</option>
+                                            <option value="1">⭐ 最低</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="margin-bottom: 10px;">
+                                        <label style="font-size: 13px; color: #666; display: block; margin-bottom: 5px;">标签 (逗号分隔):</label>
+                                        <input type="text" id="memoryTags" placeholder="例如: 用户偏好, Python, 编程" style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px;">
+                                    </div>
+                                    
+                                    <button onclick="storeMemory()" class="btn btn-primary" style="width: 100%;">💾 存储记忆</button>
+                                </div>
+
+                                <!-- 检索记忆 -->
+                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h4 style="margin-bottom: 15px; color: #667eea;">🔍 检索记忆</h4>
+                                    <input type="text" id="memoryQuery" placeholder="输入查询内容..." style="width: 100%; padding: 8px; border: 1px solid #e0e0e0; border-radius: 5px; margin-bottom: 10px;">
+                                    
+                                    <div style="display: flex; gap: 10px; margin-bottom: 10px; font-size: 13px;">
+                                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                            <input type="checkbox" id="filterSemantic" checked> 语义
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                            <input type="checkbox" id="filterEpisodic" checked> 情景
+                                        </label>
+                                        <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                            <input type="checkbox" id="filterLongTerm" checked> 长期
+                                        </label>
+                                    </div>
+                                    
+                                    <button onclick="retrieveMemories()" class="btn btn-primary" style="width: 100%;">🔍 搜索记忆</button>
+                                </div>
+
+                                <!-- 记忆统计 -->
+                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h4 style="margin-bottom: 15px; color: #667eea;">📊 记忆统计</h4>
+                                    <div id="memoryStats" style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 13px; line-height: 1.8; min-height: 150px;">
+                                        <p>加载中...</p>
+                                    </div>
+                                    <button onclick="loadMemoryStats()" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">🔄 刷新统计</button>
+                                </div>
+                            </div>
+
+                            <!-- 右侧：对话和显示区域 -->
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <!-- 基于记忆的对话 -->
+                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h4 style="margin-bottom: 15px; color: #667eea;">💬 基于记忆的对话</h4>
+                                    <div id="memoryMessages" style="height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #f8f9fa;"></div>
+                                    <div style="display: flex; gap: 10px;">
+                                        <textarea id="memoryChatInput" placeholder="输入消息... (AI会基于存储的记忆回答)" rows="2" style="flex: 1; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px;"></textarea>
+                                        <button onclick="sendMemoryChat()" class="btn btn-primary" style="height: auto;">发送</button>
+                                    </div>
+                                </div>
+
+                                <!-- 检索结果 -->
+                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <h4 style="margin-bottom: 15px; color: #667eea;">📋 检索结果</h4>
+                                    <div id="memoryResults" style="max-height: 400px; overflow-y: auto;">
+                                        <p style="color: #999; text-align: center; padding: 40px 20px;">检索结果将显示在这里...</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -5906,6 +6010,197 @@ ${data.error_message ? `**错误信息**: ${data.error_message}` : ''}
             alert('完整协作结果已在控制台输出，可以按 F12 查看');
         }
 
+        // ==================== Memory Management 相关函数 ====================
+        const MEMORY_SESSION_ID = 'default';
+
+        // 存储记忆
+        async function storeMemory() {
+            const content = document.getElementById('memoryContent').value.trim();
+            if (!content) {
+                alert('请输入记忆内容');
+                return;
+            }
+            
+            const memoryType = document.getElementById('memoryType').value;
+            const importance = parseInt(document.getElementById('memoryImportance').value);
+            const tagsStr = document.getElementById('memoryTags').value;
+            const tags = tagsStr ? tagsStr.split(',').map(t => t.trim()) : [];
+            
+            try {
+                const response = await fetch('/api/memory/store', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        content: content,
+                        memory_type: memoryType,
+                        importance: importance,
+                        tags: tags,
+                        session_id: MEMORY_SESSION_ID
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ 记忆已存储！');
+                    document.getElementById('memoryContent').value = '';
+                    document.getElementById('memoryTags').value = '';
+                    loadMemoryStats();
+                }
+            } catch (error) {
+                console.error('存储记忆失败:', error);
+                alert('存储记忆失败，请重试');
+            }
+        }
+
+        // 检索记忆
+        async function retrieveMemories() {
+            const query = document.getElementById('memoryQuery').value.trim();
+            if (!query) {
+                alert('请输入查询内容');
+                return;
+            }
+            
+            const memoryTypes = [];
+            if (document.getElementById('filterSemantic').checked) memoryTypes.push('semantic');
+            if (document.getElementById('filterEpisodic').checked) memoryTypes.push('episodic');
+            if (document.getElementById('filterLongTerm').checked) memoryTypes.push('long_term');
+            
+            try {
+                const response = await fetch('/api/memory/retrieve', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        query: query,
+                        memory_types: memoryTypes.length > 0 ? memoryTypes : null,
+                        top_k: 10,
+                        session_id: MEMORY_SESSION_ID
+                    })
+                });
+                
+                const data = await response.json();
+                displayMemoryResults(data.results);
+            } catch (error) {
+                console.error('检索记忆失败:', error);
+                alert('检索记忆失败，请重试');
+            }
+        }
+
+        // 显示检索结果
+        function displayMemoryResults(results) {
+            const container = document.getElementById('memoryResults');
+            if (!results || results.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px 20px;">未找到相关记忆</p>';
+                return;
+            }
+            
+            container.innerHTML = results.map(result => {
+                const memoryTypeIcons = {
+                    'semantic': '📚',
+                    'episodic': '📖',
+                    'long_term': '💾',
+                    'short_term': '⚡',
+                    'working': '🔧',
+                    'procedural': '⚙️'
+                };
+                const icon = memoryTypeIcons[result.memory.memory_type] || '💭';
+                
+                return `
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 3px solid #667eea;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #666;">
+                            <span>${icon} ${result.memory.memory_type}</span>
+                            <span>相关性: ${(result.relevance_score * 100).toFixed(0)}%</span>
+                        </div>
+                        <div style="font-size: 14px; color: #333; margin-bottom: 8px;">${result.memory.content}</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                            ${result.memory.tags.map(tag => `<span style="background: #667eea; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px;">${tag}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 加载记忆统计
+        async function loadMemoryStats() {
+            try {
+                const response = await fetch(`/api/memory/statistics/${MEMORY_SESSION_ID}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const stats = data.statistics;
+                    const memoryTypeIcons = {
+                        'semantic': '📚',
+                        'episodic': '📖',
+                        'long_term': '💾',
+                        'short_term': '⚡',
+                        'working': '🔧',
+                        'procedural': '⚙️'
+                    };
+                    
+                    let html = `<p><strong>📊 总记忆数:</strong> ${stats.total_memories}</p>`;
+                    
+                    if (Object.keys(stats.by_type).length > 0) {
+                        html += `<p><strong>📦 按类型分布:</strong></p>`;
+                        for (const [type, count] of Object.entries(stats.by_type)) {
+                            const icon = memoryTypeIcons[type] || '💭';
+                            html += `<p style="margin-left:15px">${icon} ${type}: ${count}</p>`;
+                        }
+                    }
+                    
+                    html += `<p><strong>💾 存储大小:</strong> ${stats.storage_size_kb} KB</p>`;
+                    
+                    document.getElementById('memoryStats').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('加载统计失败:', error);
+                document.getElementById('memoryStats').innerHTML = '<p style="color: #dc3545;">加载失败，请重试</p>';
+            }
+        }
+
+        // 基于记忆的对话
+        async function sendMemoryChat() {
+            const input = document.getElementById('memoryChatInput');
+            const userInput = input.value.trim();
+            if (!userInput) return;
+            
+            // 添加用户消息
+            addMemoryMessage('user', userInput);
+            input.value = '';
+            
+            try {
+                const response = await fetch('/api/memory/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_input: userInput,
+                        session_id: MEMORY_SESSION_ID
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    addMemoryMessage('assistant', data.response);
+                }
+            } catch (error) {
+                console.error('对话失败:', error);
+                addMemoryMessage('assistant', '抱歉，对话失败，请重试');
+            }
+        }
+
+        // 添加消息到对话区域
+        function addMemoryMessage(role, content) {
+            const container = document.getElementById('memoryMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                margin-bottom: 12px;
+                padding: 10px 15px;
+                border-radius: 8px;
+                ${role === 'user' ? 'background: #667eea; color: white; margin-left: 40px; text-align: right;' : 'background: white; margin-right: 40px;'}
+            `;
+            messageDiv.textContent = content;
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
         // 页面加载时初始化
         (function() {
             const originalInit = window.onload;
@@ -5913,6 +6208,14 @@ ${data.error_message ? `**错误信息**: ${data.error_message}` : ''}
                 if (originalInit) originalInit();
                 loadReflectionScenarios();
                 loadCollaborationData();  // 加载协作数据
+                
+                // 初始化Memory标签时加载统计
+                const memoryTab = document.querySelector('[onclick*="memory"]');
+                if (memoryTab) {
+                    memoryTab.addEventListener('click', function() {
+                        setTimeout(loadMemoryStats, 100);
+                    });
+                }
             };
         })();
     </script>
