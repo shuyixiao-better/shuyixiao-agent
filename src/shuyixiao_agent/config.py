@@ -71,6 +71,10 @@ class Settings(BaseSettings):
         default=60,
         description="请求超时时间（秒）"
     )
+    multi_agent_timeout: int = Field(
+        default=180,
+        description="多智能体协作超时时间（秒），因为需要多次API调用"
+    )
     max_retries: int = Field(
         default=3,
         description="最大重试次数"

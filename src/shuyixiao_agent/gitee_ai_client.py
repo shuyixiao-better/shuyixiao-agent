@@ -90,6 +90,7 @@ class GiteeAIClient:
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         stream: bool = False,
+        timeout: Optional[int] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -100,6 +101,7 @@ class GiteeAIClient:
             temperature: 温度参数，控制随机性 (0-2)
             max_tokens: 最大生成 token 数
             stream: 是否使用流式输出
+            timeout: 自定义超时时间（秒），默认使用配置中的值
             **kwargs: 其他模型参数
             
         Returns:
@@ -119,11 +121,14 @@ class GiteeAIClient:
             payload["max_tokens"] = max_tokens
         
         try:
+            # 使用自定义超时时间或默认超时时间
+            request_timeout = timeout if timeout is not None else settings.request_timeout
+            
             response = self.session.post(
                 url,
                 headers=self._get_headers(),
                 json=payload,
-                timeout=settings.request_timeout,
+                timeout=request_timeout,
                 stream=stream,
                 verify=self.ssl_verify
             )
@@ -167,13 +172,14 @@ class GiteeAIClient:
                     except json.JSONDecodeError:
                         continue
     
-    def simple_chat(self, user_message: str, system_message: Optional[str] = None) -> str:
+    def simple_chat(self, user_message: str, system_message: Optional[str] = None, timeout: Optional[int] = None) -> str:
         """
         简单的单轮对话方法
         
         Args:
             user_message: 用户消息
             system_message: 系统提示词（可选）
+            timeout: 自定义超时时间（秒），默认使用配置中的值
             
         Returns:
             模型回复的文本内容
@@ -185,7 +191,7 @@ class GiteeAIClient:
         
         messages.append({"role": "user", "content": user_message})
         
-        response = self.chat_completion(messages=messages)
+        response = self.chat_completion(messages=messages, timeout=timeout)
         
         return response["choices"][0]["message"]["content"]
     

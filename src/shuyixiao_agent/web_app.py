@@ -69,6 +69,16 @@ from .agents.planning_agent import (
     ProjectPlanningScenarios,
     PlanningTaskHandlers
 )
+from .agents.multi_agent_collaboration import (
+    MultiAgentCollaboration,
+    CollaborationMode,
+    AgentRole,
+    AgentProfile,
+    SoftwareDevelopmentTeam,
+    ResearchTeam,
+    ContentCreationTeam,
+    BusinessConsultingTeam
+)
 from .tools.predefined_tools import PredefinedToolsRegistry
 from .tools.basic_tools import get_basic_tools
 from .config import settings
@@ -2560,6 +2570,265 @@ async def get_planning_scenarios():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取规划场景失败: {str(e)}")
+
+
+# ==================== Multi-Agent Collaboration APIs ====================
+
+class MultiAgentCollaborationRequest(BaseModel):
+    """多智能体协作请求"""
+    input_text: str
+    team_type: str  # software_dev, research, content, business
+    mode: Optional[str] = "hierarchical"
+    context: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/multi-agent/teams")
+async def get_collaboration_teams():
+    """获取可用的协作团队类型"""
+    teams = {
+        "software_dev": {
+            "name": "软件开发团队",
+            "description": "产品经理、系统架构师、开发工程师、QA 工程师协同工作",
+            "agents": [
+                {"name": "产品经理", "role": "coordinator", "expertise": ["需求分析", "产品规划"]},
+                {"name": "系统架构师", "role": "specialist", "expertise": ["系统架构", "技术选型"]},
+                {"name": "后端开发工程师", "role": "executor", "expertise": ["后端开发", "API设计"]},
+                {"name": "前端开发工程师", "role": "executor", "expertise": ["前端开发", "UI实现"]},
+                {"name": "QA工程师", "role": "reviewer", "expertise": ["测试", "质量保证"]}
+            ],
+            "use_cases": ["需求分析与设计", "系统架构设计", "功能开发规划", "代码质量审查"]
+        },
+        "research": {
+            "name": "研究团队",
+            "description": "研究负责人、理论专家、数据科学家、实验研究者、同行评审专家协同研究",
+            "agents": [
+                {"name": "研究负责人", "role": "coordinator", "expertise": ["研究规划", "团队协调"]},
+                {"name": "理论研究者", "role": "specialist", "expertise": ["理论分析", "模型构建"]},
+                {"name": "数据科学家", "role": "specialist", "expertise": ["数据分析", "统计建模"]},
+                {"name": "实验研究者", "role": "executor", "expertise": ["实验设计", "数据收集"]},
+                {"name": "同行评审专家", "role": "reviewer", "expertise": ["学术评审", "质量控制"]}
+            ],
+            "use_cases": ["研究课题设计", "数据分析方案", "实验方案设计", "论文质量评审"]
+        },
+        "content": {
+            "name": "内容创作团队",
+            "description": "内容策略师、撰写者、编辑、SEO专家协同创作",
+            "agents": [
+                {"name": "内容策略师", "role": "coordinator", "expertise": ["内容策划", "受众分析"]},
+                {"name": "内容撰写者", "role": "executor", "expertise": ["写作", "文案"]},
+                {"name": "内容编辑", "role": "reviewer", "expertise": ["编辑", "校对"]},
+                {"name": "SEO专家", "role": "advisor", "expertise": ["SEO", "关键词优化"]}
+            ],
+            "use_cases": ["文章策划与创作", "营销文案撰写", "技术文档编写", "内容SEO优化"]
+        },
+        "business": {
+            "name": "商业咨询团队",
+            "description": "首席顾问、商业分析师、财务顾问、实施专家、质量保证专家协同咨询",
+            "agents": [
+                {"name": "首席顾问", "role": "coordinator", "expertise": ["战略规划", "项目管理"]},
+                {"name": "商业分析师", "role": "specialist", "expertise": ["业务分析", "市场研究"]},
+                {"name": "财务顾问", "role": "specialist", "expertise": ["财务分析", "成本效益"]},
+                {"name": "实施专家", "role": "executor", "expertise": ["方案实施", "变革管理"]},
+                {"name": "质量保证专家", "role": "reviewer", "expertise": ["质量审核", "风险评估"]}
+            ],
+            "use_cases": ["业务战略规划", "市场分析报告", "财务可行性分析", "项目实施方案"]
+        }
+    }
+    
+    return {
+        "success": True,
+        "teams": teams,
+        "count": len(teams)
+    }
+
+
+@app.get("/api/multi-agent/modes")
+async def get_collaboration_modes():
+    """获取可用的协作模式"""
+    modes = {
+        "sequential": {
+            "name": "顺序协作",
+            "description": "Agents 按顺序工作，后面的 Agent 基于前面的结果继续工作",
+            "icon": "🔄",
+            "use_case": "适合有明确流程的任务"
+        },
+        "parallel": {
+            "name": "并行协作",
+            "description": "所有 Agents 同时工作，然后整合各自的结果",
+            "icon": "⚡",
+            "use_case": "适合需要多角度分析的任务"
+        },
+        "hierarchical": {
+            "name": "层级协作",
+            "description": "有明确的管理层级，协调者分配任务，专家执行，审核者检查",
+            "icon": "🏢",
+            "use_case": "适合复杂的、需要专业分工的任务（推荐）"
+        },
+        "peer_to_peer": {
+            "name": "对等协作",
+            "description": "Agents 平等协作，相互讨论和改进",
+            "icon": "🤝",
+            "use_case": "适合需要反复讨论和优化的任务"
+        },
+        "hybrid": {
+            "name": "混合模式",
+            "description": "结合多种协作方式的优势",
+            "icon": "🔀",
+            "use_case": "灵活适应不同场景"
+        }
+    }
+    
+    return {
+        "success": True,
+        "modes": modes
+    }
+
+
+@app.post("/api/multi-agent/collaborate")
+async def multi_agent_collaborate(request: MultiAgentCollaborationRequest):
+    """执行多智能体协作"""
+    try:
+        # 获取 LLM 客户端
+        llm_client = GiteeAIClient()
+        
+        # 创建协作系统
+        collaboration = MultiAgentCollaboration(
+            llm_client=llm_client,
+            mode=request.mode,
+            verbose=True
+        )
+        
+        # 根据团队类型注册 Agents
+        if request.team_type == "software_dev":
+            agents = SoftwareDevelopmentTeam.get_agents()
+        elif request.team_type == "research":
+            agents = ResearchTeam.get_agents()
+        elif request.team_type == "content":
+            agents = ContentCreationTeam.get_agents()
+        elif request.team_type == "business":
+            agents = BusinessConsultingTeam.get_agents()
+        else:
+            raise HTTPException(status_code=400, detail=f"未知的团队类型: {request.team_type}")
+        
+        collaboration.register_agents(agents)
+        
+        # 执行协作
+        result = collaboration.collaborate(request.input_text, request.context)
+        
+        return {
+            "success": result.success,
+            "final_output": result.final_output,
+            "agent_contributions": result.agent_contributions,
+            "messages": [
+                {
+                    "sender": msg.sender,
+                    "receiver": msg.receiver,
+                    "content": msg.content,
+                    "type": msg.message_type,
+                    "timestamp": msg.timestamp
+                }
+                for msg in result.messages
+            ],
+            "execution_time": result.execution_time,
+            "error_message": result.error_message
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"多智能体协作失败: {str(e)}")
+
+
+@app.post("/api/multi-agent/collaborate/stream")
+async def multi_agent_collaborate_stream(request: MultiAgentCollaborationRequest):
+    """流式执行多智能体协作"""
+    try:
+        # 获取 LLM 客户端
+        llm_client = GiteeAIClient()
+        
+        def generate_collaboration():
+            try:
+                # 发送开始事件
+                yield f"data: {json.dumps({'type': 'start', 'message': '开始多智能体协作'}, ensure_ascii=False)}\n\n"
+                
+                # 创建协作系统
+                collaboration = MultiAgentCollaboration(
+                    llm_client=llm_client,
+                    mode=request.mode,
+                    verbose=False  # 流式模式下关闭控制台输出
+                )
+                
+                # 根据团队类型注册 Agents
+                if request.team_type == "software_dev":
+                    agents = SoftwareDevelopmentTeam.get_agents()
+                    team_name = "软件开发团队"
+                elif request.team_type == "research":
+                    agents = ResearchTeam.get_agents()
+                    team_name = "研究团队"
+                elif request.team_type == "content":
+                    agents = ContentCreationTeam.get_agents()
+                    team_name = "内容创作团队"
+                elif request.team_type == "business":
+                    agents = BusinessConsultingTeam.get_agents()
+                    team_name = "商业咨询团队"
+                else:
+                    yield f"data: {json.dumps({'type': 'error', 'message': f'未知的团队类型: {request.team_type}'}, ensure_ascii=False)}\n\n"
+                    return
+                
+                collaboration.register_agents(agents)
+                
+                # 发送团队信息
+                team_info = {
+                    "type": "team_info",
+                    "team_name": team_name,
+                    "agent_count": len(agents),
+                    "agents": [{"name": a.name, "role": a.role.value, "description": a.description} for a in agents],
+                    "mode": request.mode
+                }
+                yield f"data: {json.dumps(team_info, ensure_ascii=False)}\n\n"
+                
+                # 执行协作
+                result = collaboration.collaborate(request.input_text, request.context)
+                
+                # 发送完成事件
+                complete_data = {
+                    "type": "complete",
+                    "success": result.success,
+                    "final_output": result.final_output,
+                    "agent_contributions": result.agent_contributions,
+                    "messages": [
+                        {
+                            "sender": msg.sender,
+                            "receiver": msg.receiver,
+                            "content": msg.content,
+                            "type": msg.message_type,
+                            "timestamp": msg.timestamp
+                        }
+                        for msg in result.messages
+                    ],
+                    "execution_time": result.execution_time,
+                    "error_message": result.error_message
+                }
+                yield f"data: {json.dumps(complete_data, ensure_ascii=False)}\n\n"
+                
+            except Exception as e:
+                error_data = {
+                    "type": "error",
+                    "message": f"协作执行失败: {str(e)}"
+                }
+                yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+        
+        return StreamingResponse(
+            generate_collaboration(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive"
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"流式协作失败: {str(e)}")
 
 
 if __name__ == "__main__":

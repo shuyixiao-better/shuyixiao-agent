@@ -735,6 +735,7 @@
             <button class="tab" onclick="switchTab('reflection')">💭 Reflection Agent</button>
             <button class="tab" onclick="switchTab('tooluse')">🔧 Tool Use Agent</button>
             <button class="tab" onclick="switchTab('planning')">📋 Planning Agent</button>
+            <button class="tab" onclick="switchTab('multiagent')">👥 Multi-Agent Collaboration</button>
         </div>
 
         <div class="content">
@@ -1846,6 +1847,167 @@
                     <div id="allPlansCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
                         <h4 style="margin-bottom: 16px; color: #495057;">📊 所有计划</h4>
                         <div id="allPlansList" style="max-height: 500px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Agent Collaboration 标签页 -->
+            <div id="multiagentTab" class="tab-content">
+                <div class="rag-section scrollbar">
+                    <!-- 团队选择 -->
+                    <div class="rag-card" style="grid-column: 1 / -1;">
+                        <h3>👥 Multi-Agent Collaboration - 多智能体协作</h3>
+                        <p style="font-size: 14px; color: #6c757d; margin-bottom: 20px;">
+                            多个专业化的 AI Agent 组成团队，通过协作共同完成复杂任务。每个 Agent 扮演不同角色，贡献自己的专业知识，产生 1+1>2 的协同效应。
+                        </p>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>协作团队：</label>
+                                <select id="collaborationTeam" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;" onchange="updateTeamInfo()">
+                                    <option value="">-- 选择团队 --</option>
+                                    <option value="software_dev">💻 软件开发团队</option>
+                                    <option value="research">🔬 研究团队</option>
+                                    <option value="content">📝 内容创作团队</option>
+                                    <option value="business">💼 商业咨询团队</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>协作模式：</label>
+                                <select id="collaborationMode" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px;">
+                                    <option value="hierarchical">🏢 层级协作（推荐）</option>
+                                    <option value="sequential">🔄 顺序协作</option>
+                                    <option value="parallel">⚡ 并行协作</option>
+                                    <option value="peer_to_peer">🤝 对等协作</option>
+                                    <option value="hybrid">🔀 混合模式</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 团队信息 -->
+                        <div id="teamInfoCard" style="display: none; background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #495057;">团队信息</h4>
+                            <div id="teamDescription" style="margin-bottom: 12px; color: #6c757d;"></div>
+                            <div id="teamAgents" style="margin-bottom: 12px;"></div>
+                            <div id="teamUseCases"></div>
+                        </div>
+
+                        <!-- 快速任务示例 -->
+                        <div style="background: #e7f3ff; padding: 16px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #007bff;">
+                            <h4 style="margin-bottom: 12px; color: #004085;">🚀 快速任务</h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('设计并实现一个在线聊天应用', 'software_dev')" style="text-align: left; font-size: 13px;">
+                                    💻 开发聊天应用
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('研究深度学习在自然语言处理中的应用', 'research')" style="text-align: left; font-size: 13px;">
+                                    🔬 NLP研究
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('撰写一篇关于人工智能未来发展的文章', 'content')" style="text-align: left; font-size: 13px;">
+                                    📝 AI文章创作
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('分析企业数字化转型策略', 'business')" style="text-align: left; font-size: 13px;">
+                                    💼 数字化转型咨询
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('设计一个电商平台的系统架构', 'software_dev')" style="text-align: left; font-size: 13px;">
+                                    🏗️ 电商架构设计
+                                </button>
+                                <button class="btn btn-outline" onclick="setQuickCollaboration('制定产品推广和营销策略', 'content')" style="text-align: left; font-size: 13px;">
+                                    📢 营销策划
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 输入区域 -->
+                        <div class="form-group">
+                            <label>任务描述：</label>
+                            <textarea 
+                                id="collaborationTask" 
+                                placeholder="请描述需要团队协作完成的任务，例如：&#10;&#10;软件开发团队：&#10;- 设计并实现一个博客系统&#10;- 开发一个移动应用&#10;&#10;研究团队：&#10;- 研究某个科学问题&#10;- 设计实验方案&#10;&#10;内容创作团队：&#10;- 撰写技术文章&#10;- 策划营销活动&#10;&#10;商业咨询团队：&#10;- 制定商业计划&#10;- 分析市场机会"
+                                style="width: 100%; height: 150px; padding: 15px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 14px; resize: vertical;"
+                            ></textarea>
+                        </div>
+                        
+                        <!-- 执行按钮 -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button class="btn btn-primary" onclick="startCollaboration()" id="collaborationStartBtn">
+                                🚀 开始协作
+                            </button>
+                            <button class="btn btn-secondary" onclick="showTeamDetails()">
+                                👥 查看团队
+                            </button>
+                            <button class="btn btn-secondary" onclick="showModeDetails()">
+                                🔄 查看模式
+                            </button>
+                            <button class="btn btn-outline" onclick="clearCollaborationResult()">
+                                🧹 清除结果
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 协作进度 -->
+                    <div id="collaborationProgressCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">⚡ 协作进度</h4>
+                        <div id="collaborationTeamInfo" style="background: #e7f3ff; padding: 12px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #007bff;">
+                            <div style="font-weight: 600; margin-bottom: 8px;">团队信息加载中...</div>
+                        </div>
+                        <div id="collaborationStatus" style="color: #6c757d; font-size: 14px;">准备开始协作...</div>
+                    </div>
+
+                    <!-- Agent 贡献 -->
+                    <div id="agentContributionsCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">🤖 Agent 贡献</h4>
+                        <div id="agentContributionsList" style="max-height: 600px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+
+                    <!-- 消息记录 -->
+                    <div id="collaborationMessagesCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">💬 消息记录</h4>
+                        <div id="messagesList" style="max-height: 400px; overflow-y: auto;" class="scrollbar"></div>
+                    </div>
+
+                    <!-- 最终结果 -->
+                    <div id="collaborationResultCard" class="rag-card" style="display: none; grid-column: 1 / -1;">
+                        <h4 style="margin-bottom: 16px; color: #495057;">✅ 协作结果</h4>
+                        
+                        <!-- 执行统计 -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px;">
+                            <div style="background: #d1f4e0; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #155724;" id="collaborationSuccess">-</div>
+                                <div style="font-size: 12px; color: #155724;">协作状态</div>
+                            </div>
+                            <div style="background: #cce7ff; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #004085;" id="agentCount">-</div>
+                                <div style="font-size: 12px; color: #004085;">参与 Agent</div>
+                            </div>
+                            <div style="background: #fff3cd; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #856404;" id="messageCount">-</div>
+                                <div style="font-size: 12px; color: #856404;">消息数量</div>
+                            </div>
+                            <div style="background: #f8d7da; padding: 12px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 20px; font-weight: 600; color: #721c24;" id="collaborationTime">-</div>
+                                <div style="font-size: 12px; color: #721c24;">协作时长</div>
+                            </div>
+                        </div>
+
+                        <!-- 最终输出 -->
+                        <div style="background: #d1f4e0; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745; margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 12px; color: #155724;">🎯 最终输出</h4>
+                            <div id="collaborationFinalOutput" class="markdown-content"></div>
+                        </div>
+                        
+                        <!-- 操作按钮 -->
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" onclick="copyCollaborationResult()">
+                                📋 复制结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="downloadCollaborationResult()">
+                                💾 下载结果
+                            </button>
+                            <button class="btn btn-secondary" onclick="showCollaborationDetails()">
+                                📊 查看详情
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5356,12 +5518,401 @@ ${data.error_message ? `**错误信息**: ${data.error_message}` : ''}
             }
         }
 
+        // ========== Multi-Agent Collaboration Functions ==========
+
+        let collaborationTeamsData = null;
+        let collaborationModesData = null;
+        let currentCollaborationResult = null;
+
+        // 加载团队和模式信息
+        async function loadCollaborationData() {
+            try {
+                const [teamsResponse, modesResponse] = await Promise.all([
+                    fetch('/api/multi-agent/teams'),
+                    fetch('/api/multi-agent/modes')
+                ]);
+                
+                const teamsData = await teamsResponse.json();
+                const modesData = await modesResponse.json();
+                
+                if (teamsData.success) {
+                    collaborationTeamsData = teamsData.teams;
+                }
+                
+                if (modesData.success) {
+                    collaborationModesData = modesData.modes;
+                }
+            } catch (error) {
+                console.error('加载协作数据失败:', error);
+            }
+        }
+
+        // 更新团队信息
+        function updateTeamInfo() {
+            const teamType = document.getElementById('collaborationTeam').value;
+            const teamInfoCard = document.getElementById('teamInfoCard');
+            
+            if (!teamType || !collaborationTeamsData) {
+                teamInfoCard.style.display = 'none';
+                return;
+            }
+            
+            const team = collaborationTeamsData[teamType];
+            if (!team) return;
+            
+            document.getElementById('teamDescription').textContent = team.description;
+            
+            // 显示 Agents
+            let agentsHTML = '<div style="margin-bottom: 8px; font-weight: 600; color: #495057;">团队成员：</div><div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px;">';
+            team.agents.forEach(agent => {
+                agentsHTML += `
+                    <div style="background: white; padding: 8px; border-radius: 6px; border: 1px solid #dee2e6;">
+                        <div style="font-weight: 600; font-size: 13px; color: #495057; margin-bottom: 4px;">${agent.name}</div>
+                        <div style="font-size: 11px; color: #6c757d;">${agent.expertise.join(', ')}</div>
+                    </div>
+                `;
+            });
+            agentsHTML += '</div>';
+            document.getElementById('teamAgents').innerHTML = agentsHTML;
+            
+            // 显示使用场景
+            let useCasesHTML = '<div style="margin-bottom: 8px; font-weight: 600; color: #495057;">适用场景：</div><div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+            team.use_cases.forEach(useCase => {
+                useCasesHTML += `<span style="background: #e7f3ff; color: #004085; padding: 4px 12px; border-radius: 12px; font-size: 13px;">${useCase}</span>`;
+            });
+            useCasesHTML += '</div>';
+            document.getElementById('teamUseCases').innerHTML = useCasesHTML;
+            
+            teamInfoCard.style.display = 'block';
+        }
+
+        // 设置快速协作任务
+        function setQuickCollaboration(task, teamType) {
+            document.getElementById('collaborationTask').value = task;
+            document.getElementById('collaborationTeam').value = teamType;
+            updateTeamInfo();
+        }
+
+        // 开始协作
+        async function startCollaboration() {
+            const task = document.getElementById('collaborationTask').value.trim();
+            const teamType = document.getElementById('collaborationTeam').value;
+            const mode = document.getElementById('collaborationMode').value;
+            
+            if (!task) {
+                alert('请输入任务描述');
+                return;
+            }
+            
+            if (!teamType) {
+                alert('请选择协作团队');
+                return;
+            }
+            
+            const startBtn = document.getElementById('collaborationStartBtn');
+            startBtn.disabled = true;
+            startBtn.textContent = '协作中...';
+            
+            // 显示进度卡片
+            document.getElementById('collaborationProgressCard').style.display = 'block';
+            document.getElementById('collaborationStatus').textContent = '正在初始化协作...';
+            
+            // 隐藏之前的结果
+            document.getElementById('agentContributionsCard').style.display = 'none';
+            document.getElementById('collaborationMessagesCard').style.display = 'none';
+            document.getElementById('collaborationResultCard').style.display = 'none';
+            
+            try {
+                // 使用流式 API
+                const response = await fetch('/api/multi-agent/collaborate/stream', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        input_text: task,
+                        team_type: teamType,
+                        mode: mode
+                    })
+                });
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const {value, done} = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
+                            handleCollaborationEvent(data);
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('协作失败:', error);
+                alert('协作失败: ' + error.message);
+                document.getElementById('collaborationStatus').textContent = '协作失败: ' + error.message;
+            } finally {
+                startBtn.disabled = false;
+                startBtn.textContent = '🚀 开始协作';
+            }
+        }
+
+        // 处理协作事件
+        function handleCollaborationEvent(data) {
+            const statusDiv = document.getElementById('collaborationStatus');
+            
+            switch (data.type) {
+                case 'start':
+                    statusDiv.textContent = data.message;
+                    break;
+                    
+                case 'team_info':
+                    const teamInfoHTML = `
+                        <div style="font-weight: 600; margin-bottom: 8px;">团队: ${data.team_name} (${data.agent_count} 个 Agents)</div>
+                        <div style="font-size: 13px; color: #6c757d;">模式: ${data.mode}</div>
+                    `;
+                    document.getElementById('collaborationTeamInfo').innerHTML = teamInfoHTML;
+                    statusDiv.textContent = '团队已组建，开始协作...';
+                    break;
+                    
+                case 'complete':
+                    currentCollaborationResult = data;
+                    displayCollaborationResult(data);
+                    statusDiv.textContent = '协作已完成！';
+                    break;
+                    
+                case 'error':
+                    statusDiv.textContent = data.message;
+                    statusDiv.style.color = '#dc3545';
+                    break;
+            }
+        }
+
+        // 显示协作结果
+        function displayCollaborationResult(data) {
+            if (!data.success) {
+                alert('协作失败: ' + data.error_message);
+                return;
+            }
+            
+            // 显示统计信息
+            document.getElementById('collaborationSuccess').textContent = data.success ? '✅ 成功' : '❌ 失败';
+            document.getElementById('agentCount').textContent = Object.keys(data.agent_contributions).length;
+            document.getElementById('messageCount').textContent = data.messages.length;
+            document.getElementById('collaborationTime').textContent = data.execution_time.toFixed(1) + 's';
+            
+            // 显示最终输出
+            const outputDiv = document.getElementById('collaborationFinalOutput');
+            outputDiv.innerHTML = DOMPurify.sanitize(marked.parse(data.final_output));
+            
+            // 显示 Agent 贡献
+            displayAgentContributions(data.agent_contributions);
+            
+            // 显示消息记录
+            displayCollaborationMessages(data.messages);
+            
+            // 显示结果卡片
+            document.getElementById('collaborationResultCard').style.display = 'block';
+            document.getElementById('collaborationResultCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 显示 Agent 贡献
+        function displayAgentContributions(contributions) {
+            const container = document.getElementById('agentContributionsList');
+            container.innerHTML = '';
+            
+            for (const [agentName, contribution] of Object.entries(contributions)) {
+                const contributionDiv = document.createElement('div');
+                contributionDiv.style.cssText = 'background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #667eea;';
+                
+                const roleIcons = {
+                    'coordinator': '📋',
+                    'specialist': '🎯',
+                    'reviewer': '🔍',
+                    'executor': '⚙️',
+                    'advisor': '💡'
+                };
+                
+                const roleIcon = roleIcons[contribution.role] || '🤖';
+                
+                contributionDiv.innerHTML = `
+                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                        <span style="font-size: 24px; margin-right: 12px;">${roleIcon}</span>
+                        <div>
+                            <h5 style="margin: 0; color: #495057;">${agentName}</h5>
+                            <div style="font-size: 12px; color: #6c757d;">${contribution.role}</div>
+                        </div>
+                    </div>
+                    <div class="markdown-content" style="font-size: 14px;">
+                        ${DOMPurify.sanitize(marked.parse(contribution.response))}
+                    </div>
+                `;
+                
+                container.appendChild(contributionDiv);
+            }
+            
+            document.getElementById('agentContributionsCard').style.display = 'block';
+        }
+
+        // 显示消息记录
+        function displayCollaborationMessages(messages) {
+            const container = document.getElementById('messagesList');
+            container.innerHTML = '';
+            
+            messages.forEach(message => {
+                const messageDiv = document.createElement('div');
+                messageDiv.style.cssText = 'background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 8px; font-size: 13px;';
+                
+                const typeIcons = {
+                    'task': '📋',
+                    'response': '💬',
+                    'feedback': '💡',
+                    'query': '❓'
+                };
+                
+                const icon = typeIcons[message.type] || '💬';
+                
+                messageDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span style="font-weight: 600; color: #495057;">${icon} ${message.sender} → ${message.receiver}</span>
+                        <span style="color: #6c757d; font-size: 11px;">${new Date(message.timestamp * 1000).toLocaleTimeString()}</span>
+                    </div>
+                    <div style="color: #6c757d;">${message.content.substring(0, 200)}${message.content.length > 200 ? '...' : ''}</div>
+                `;
+                
+                container.appendChild(messageDiv);
+            });
+            
+            document.getElementById('collaborationMessagesCard').style.display = 'block';
+        }
+
+        // 清除协作结果
+        function clearCollaborationResult() {
+            document.getElementById('collaborationProgressCard').style.display = 'none';
+            document.getElementById('agentContributionsCard').style.display = 'none';
+            document.getElementById('collaborationMessagesCard').style.display = 'none';
+            document.getElementById('collaborationResultCard').style.display = 'none';
+            currentCollaborationResult = null;
+        }
+
+        // 复制协作结果
+        function copyCollaborationResult() {
+            if (!currentCollaborationResult) return;
+            
+            const result = currentCollaborationResult.final_output;
+            navigator.clipboard.writeText(result).then(() => {
+                alert('协作结果已复制到剪贴板');
+            }).catch(err => {
+                console.error('复制失败:', err);
+            });
+        }
+
+        // 下载协作结果
+        function downloadCollaborationResult() {
+            if (!currentCollaborationResult) return;
+            
+            const task = document.getElementById('collaborationTask').value.trim();
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `collaboration_${timestamp}.md`;
+            
+            let content = `# 多智能体协作结果\n\n`;
+            content += `**任务**: ${task}\n\n`;
+            content += `**团队**: ${document.getElementById('collaborationTeam').selectedOptions[0].text}\n`;
+            content += `**模式**: ${document.getElementById('collaborationMode').selectedOptions[0].text}\n`;
+            content += `**参与 Agent 数**: ${Object.keys(currentCollaborationResult.agent_contributions).length}\n`;
+            content += `**执行时间**: ${currentCollaborationResult.execution_time.toFixed(1)}s\n\n`;
+            content += `---\n\n`;
+            content += `## 最终输出\n\n${currentCollaborationResult.final_output}\n\n`;
+            content += `---\n\n`;
+            content += `## Agent 贡献\n\n`;
+            
+            for (const [agentName, contribution] of Object.entries(currentCollaborationResult.agent_contributions)) {
+                content += `### ${agentName} (${contribution.role})\n\n`;
+                content += `${contribution.response}\n\n`;
+            }
+            
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 显示团队详情
+        async function showTeamDetails() {
+            if (!collaborationTeamsData) {
+                await loadCollaborationData();
+            }
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">';
+            
+            for (const [teamId, team] of Object.entries(collaborationTeamsData)) {
+                html += `
+                    <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <h4 style="margin: 0 0 12px 0; color: #495057;">${team.name}</h4>
+                        <p style="margin: 0 0 12px 0; color: #6c757d; font-size: 13px;">${team.description}</p>
+                        <div style="font-size: 12px; color: #6c757d;">
+                            <div style="font-weight: 600; margin-bottom: 6px;">成员 (${team.agents.length}):</div>
+                            ${team.agents.map(a => `<div>• ${a.name}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            
+            alert('团队详情已在控制台输出');
+            console.log('协作团队:', collaborationTeamsData);
+        }
+
+        // 显示模式详情
+        async function showModeDetails() {
+            if (!collaborationModesData) {
+                await loadCollaborationData();
+            }
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">';
+            
+            for (const [modeId, mode] of Object.entries(collaborationModesData)) {
+                html += `
+                    <div style="background: white; padding: 16px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <h4 style="margin: 0 0 8px 0; color: #495057;">${mode.icon} ${mode.name}</h4>
+                        <p style="margin: 0 0 8px 0; color: #6c757d; font-size: 13px;">${mode.description}</p>
+                        <div style="font-size: 12px; color: #6c757d; font-style: italic;">${mode.use_case}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            
+            alert('模式详情已在控制台输出');
+            console.log('协作模式:', collaborationModesData);
+        }
+
+        // 显示协作详情
+        function showCollaborationDetails() {
+            if (!currentCollaborationResult) return;
+            
+            console.log('完整协作结果:', currentCollaborationResult);
+            alert('完整协作结果已在控制台输出，可以按 F12 查看');
+        }
+
         // 页面加载时初始化
         (function() {
             const originalInit = window.onload;
             window.onload = function() {
                 if (originalInit) originalInit();
                 loadReflectionScenarios();
+                loadCollaborationData();  // 加载协作数据
             };
         })();
     </script>
