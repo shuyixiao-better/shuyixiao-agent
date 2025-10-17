@@ -22,6 +22,19 @@ if sys.platform == 'win32':
 # 添加 src 目录到 Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
+def get_local_ip():
+    """获取本机局域网IP地址"""
+    try:
+        # 创建一个UDP socket来获取本机IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # 不需要真正连接，只是为了获取本机IP
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return None
+
 def is_port_available(port):
     """检查端口是否可用"""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -82,13 +95,20 @@ def main():
         print(f"⚠️  配置加载失败: {e}")
         print()
     
+    local_ip = get_local_ip()
+    
     print("=" * 70)
     print("🎉 正在启动服务器...")
     print("=" * 70)
     print()
     print("📍 访问地址:")
-    print(f"   🌐 Web 界面: http://localhost:{port}")
-    print(f"   📖 API 文档: http://localhost:{port}/docs")
+    print(f"   🏠 本地访问:")
+    print(f"      🌐 Web 界面: http://localhost:{port}")
+    print(f"      📖 API 文档: http://localhost:{port}/docs")
+    if local_ip:
+        print(f"   🌐 局域网访问:")
+        print(f"      🌐 Web 界面: http://{local_ip}:{port}")
+        print(f"      📖 API 文档: http://{local_ip}:{port}/docs")
     print()
     print("💡 功能说明:")
     print("   💬 智能对话 - 简单对话和工具调用")
@@ -96,6 +116,7 @@ def main():
     print("   🗄️  知识库管理 - 上传和管理文档")
     print()
     print("📝 提示:")
+    print("   - 局域网内其他设备可通过局域网IP访问此服务")
     print("   - 按 Ctrl+C 停止服务")
     print("   - 首次使用 RAG 功能时会初始化组件")
     print()
