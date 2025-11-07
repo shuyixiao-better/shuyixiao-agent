@@ -458,7 +458,7 @@ def get_agent(collection_name):
 
 ## 相关文档
 
-- [API 参考](api_reference.md)
-- [最佳实践](best_practices.md)
-- [LangGraph 架构](langgraph_architecture.md)
+- [API 参考](API 参考文档.md)
+- [最佳实践](最佳实践.md)
+- [LangGraph 架构](LangGraph 架构详解.md)
 

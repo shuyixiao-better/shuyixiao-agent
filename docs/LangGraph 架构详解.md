@@ -568,7 +568,7 @@ result = graph.invoke(state, {"configurable": {"thread_id": "1"}})
 
 ## 下一步
 
-- 查看 [API 参考](./api_reference.md)
-- 阅读 [最佳实践](./best_practices.md)
+- 查看 [API 参考](API 参考文档.md)
+- 阅读 [最佳实践](最佳实践.md)
 - 尝试修改示例实现自己的 Agent
 

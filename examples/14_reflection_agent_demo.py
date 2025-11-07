@@ -417,7 +417,7 @@ def main():
     print("  - Reflection 通过多轮反思和改进显著提升输出质量")
     print("  - 不同策略适用于不同场景")
     print("  - 可以通过调整迭代次数和质量阈值控制优化程度")
-    print("  - 查看 REFLECTION_AGENT_FEATURES.md 了解更多信息")
+    print("  - 查看 🎯 Reflection Agent 功能完成！.md 了解更多信息")
 
 
 if __name__ == "__main__":

@@ -500,8 +500,8 @@ def chat_with_retry(agent, message, max_retries=3):
 
 ## 更多信息
 
-- [快速开始](./getting_started.md)
+- [快速开始](快速开始.md)
 - [示例代码](../examples/)
 - [自定义工具](./custom_tools.md)
-- [最佳实践](./best_practices.md)
+- [最佳实践](最佳实践.md)
 

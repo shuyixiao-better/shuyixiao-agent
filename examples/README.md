@@ -141,7 +141,7 @@ python examples/06_ai_powered_tools_demo.py
 - ❌ 旧工具：获取时间、计算、字符串反转 - Java也能做
 - ✅ 新工具：代码审查、创意生成、决策分析 - 需要AI智能
 
-📖 **详细了解：** [AI工具设计哲学](../docs/ai_tools_philosophy.md)
+📖 **详细了解：** [AI工具设计哲学](../docs/AI工具设计哲学.md)
 
 ---
 
@@ -274,8 +274,8 @@ python examples/11_prompt_chaining_simple.py
 - 🎯 想看实际代码实现的用户
 
 📖 **深入学习：**
-- [Prompt Chaining 快速开始](../PROMPT_CHAINING_README.md)
-- [Prompt Chaining 完整指南](../docs/prompt_chaining_guide.md)
+- [Prompt Chaining 快速开始](../🔗%20Prompt%20Chaining%20Agent%20-%20快速开始.md)
+- [Prompt Chaining 完整指南](../docs/Prompt%20Chaining%20Agent%20使用指南.md)
 - [Agentic Design Patterns 原理](https://github.com/ginobefun/agentic-design-patterns-cn/blob/main/07-Chapter-01-Prompt-Chaining.md)
 
 ---
@@ -332,9 +332,9 @@ python examples/12_routing_agent_demo.py
 - **组合使用**: 先用Routing识别任务类型，再用Chaining执行复杂流程
 
 📖 **深入学习：**
-- [Routing Agent 功能文档](../ROUTING_AGENT_FEATURES.md)
+- [Routing Agent 功能文档](../🎯%20Routing%20Agent%20功能完成！.md)
 - [Agentic Design Patterns - Routing](https://github.com/ginobefun/agentic-design-patterns-cn/blob/main/08-Chapter-02-Routing.md)
-- [Web界面体验](../docs/web_interface.md) - 运行 `python run_web.py` 后访问 "🎯 Routing Agent" 标签页
+- [Web界面体验](../docs/Web%20界面使用指南.md) - 运行 `python run_web.py` 后访问 "🎯 Routing Agent" 标签页
 
 ---
 
@@ -391,6 +391,6 @@ python examples/01_simple_chat.py
 ## 下一步
 
 - 阅读 [完整文档](../docs/)
-- 查看 [API 参考](../docs/api_reference.md)
+- 查看 [API 参考](../docs/API%20参考文档.md)
 - 尝试修改示例代码，实现自己的功能
 

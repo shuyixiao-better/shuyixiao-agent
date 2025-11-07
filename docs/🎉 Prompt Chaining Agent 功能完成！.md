@@ -305,7 +305,7 @@ python examples/11_prompt_chaining_simple.py
 python examples/10_prompt_chaining_demo.py
 
 # 自己编写代码
-# 查看 docs/prompt_chaining_guide.md
+# 查看 docs/Prompt Chaining Agent 使用指南.md
 ```
 
 ## 📞 反馈和问题

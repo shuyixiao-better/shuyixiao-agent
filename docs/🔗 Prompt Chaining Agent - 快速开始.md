@@ -222,7 +222,7 @@ curl -X POST http://localhost:8001/api/prompt-chaining/run/stream \
 
 ## 📖 完整文档
 
-详细使用指南请查看: [docs/prompt_chaining_guide.md](docs/prompt_chaining_guide.md)
+详细使用指南请查看: [docs/prompt_chaining_guide.md](Prompt Chaining Agent 使用指南.md)
 
 包含：
 - ✅ 详细的使用教程

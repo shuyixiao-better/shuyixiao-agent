@@ -244,9 +244,9 @@ python examples/16_planning_agent_demo.py
 ### 🎓 深入学习
 
 - **论文原文**: [ReAct: Synergizing Reasoning and Acting in Language Models](https://arxiv.org/abs/2210.03629)
-- **架构文档**: [docs/langgraph_architecture.md](docs/langgraph_architecture.md)
-- **工具文档**: [docs/tools_reference.md](docs/tools_reference.md)
-- **API 参考**: [docs/api_reference.md](docs/api_reference.md)
+- **架构文档**: [docs/langgraph_architecture.md](docs/LangGraph 架构详解.md)
+- **工具文档**: [docs/tools_reference.md](docs/工具参考文档.md)
+- **API 参考**: [docs/api_reference.md](docs/API 参考文档.md)
 
 ## 🚀 快速开始
 
@@ -304,7 +304,7 @@ USE_CLOUD_RERANKER=true
 CLOUD_RERANKER_MODEL=bge-reranker-base
 ```
 
-💡 查看 [模型配置文档](docs/model_configuration.md) 了解高级配置
+💡 查看 [模型配置文档](docs/模型配置指南.md) 了解高级配置
 
 ### 4. 启动 Web 界面（推荐）
 
@@ -482,7 +482,7 @@ if result.success:
 - 📖 故事创作 - 创意写作工作流
 - 💡 产品分析 - 需求分析和规划
 
-详见：[Prompt Chaining 快速开始](PROMPT_CHAINING_README.md) | [完整指南](docs/prompt_chaining_guide.md)
+详见：[Prompt Chaining 快速开始](🔗 Prompt Chaining Agent - 快速开始.md) | [完整指南](docs/Prompt Chaining Agent 使用指南.md)
 
 ---
 
@@ -525,7 +525,7 @@ if result.success:
 | `meeting_summarizer` | 会议总结 | 信息提取、结构化 |
 | `learning_path_designer` | 学习路径设计 | 知识体系、路径规划 |
 
-详见：[AI工具设计哲学](docs/ai_tools_philosophy.md) | [工具参考文档](docs/tools_reference.md)
+详见：[AI工具设计哲学](docs/AI工具设计哲学.md) | [工具参考文档](docs/工具参考文档.md)
 
 ## 🤖 可用模型
 
@@ -545,20 +545,20 @@ if result.success:
 - **bge-reranker-base** ⭐ - 推荐
 - **bge-reranker-large** - 更高精度
 
-📖 查看 [模型配置指南](docs/model_configuration.md) 了解如何配置
+📖 查看 [模型配置指南](docs/模型配置指南.md) 了解如何配置
 
 ## 📚 文档
 
-- [快速开始](docs/getting_started.md) - 详细的安装配置指南
-- [模型配置](docs/model_configuration.md) - 灵活配置不同模型
-- [Prompt Chaining 指南](docs/prompt_chaining_guide.md) ⭐ - 提示链完整教程
-- [工具参考](docs/tools_reference.md) - 所有工具的详细文档
-- [AI工具哲学](docs/ai_tools_philosophy.md) - AI工具设计理念
-- [Web 界面](docs/web_interface.md) - Web界面使用说明
-- [RAG 指南](docs/rag_guide.md) - RAG系统使用指南
-- [API 参考](docs/api_reference.md) - 完整的API文档
-- [LangGraph 架构](docs/langgraph_architecture.md) - 架构设计详解
-- [最佳实践](docs/best_practices.md) - 开发建议
+- [快速开始](docs/快速开始.md) - 详细的安装配置指南
+- [模型配置](docs/模型配置指南.md) - 灵活配置不同模型
+- [Prompt Chaining 指南](docs/Prompt Chaining Agent 使用指南.md) ⭐ - 提示链完整教程
+- [工具参考](docs/工具参考文档.md) - 所有工具的详细文档
+- [AI工具哲学](docs/AI工具设计哲学.md) - AI工具设计理念
+- [Web 界面](docs/Web 界面使用指南.md) - Web界面使用说明
+- [RAG 指南](docs/RAG (检索增强生成) 使用指南.md) - RAG系统使用指南
+- [API 参考](docs/API 参考文档.md) - 完整的API文档
+- [LangGraph 架构](docs/LangGraph 架构详解.md) - 架构设计详解
+- [最佳实践](docs/最佳实践.md) - 开发建议
 
 ## 🔧 配置选项
 
@@ -597,11 +597,11 @@ SSL_VERIFY=false
 USE_CLOUD_EMBEDDING=true
 ```
 
-更多问题请查看 [docs/ssl_troubleshooting.md](docs/ssl_troubleshooting.md)
+更多问题请查看 [docs/ssl_troubleshooting.md](docs/SSL 连接错误解决方案.md)
 
 ## 🤝 贡献
 
-欢迎贡献！请查看 [贡献指南](CONTRIBUTING.md)
+欢迎贡献！请查看 [贡献指南](docs/贡献指南.md)
 
 1. Fork 本仓库
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)

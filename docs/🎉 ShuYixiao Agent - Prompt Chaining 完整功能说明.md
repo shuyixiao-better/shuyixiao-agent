@@ -490,10 +490,10 @@ curl http://localhost:8001/api/prompt-chaining/types
 ## 📞 支持与反馈
 
 ### 文档资源
-- 📚 [快速开始](PROMPT_CHAINING_README.md)
-- 📚 [完整指南](docs/prompt_chaining_guide.md)
-- 📚 [Web界面指南](WEB_PROMPT_CHAINING_GUIDE.md)
-- 📚 [示例说明](examples/README.md)
+- 📚 [快速开始](🔗 Prompt Chaining Agent - 快速开始.md)
+- 📚 [完整指南](Prompt Chaining Agent 使用指南.md)
+- 📚 [Web界面指南](🌐 Web 界面 Prompt Chaining 功能完整指南.md)
+- 📚 [示例说明](../examples/README.md)
 
 ### 代码资源
 - 💻 核心实现: `src/shuyixiao_agent/agents/prompt_chaining_agent.py`
