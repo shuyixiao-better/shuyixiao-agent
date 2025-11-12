@@ -1,0 +1,4 @@
+flask==3.0.0
+colorama==0.4.6
+pyyaml==6.0.1
+javalang==0.13.0

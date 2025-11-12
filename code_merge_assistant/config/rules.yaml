@@ -1,0 +1,61 @@
+# 代码合并规则配置
+
+# 优先级规则
+priority:
+  - type: "import"
+    strategy: "keep_both"  # 保留双方的 import 语句
+    description: "导入语句通常都需要保留"
+  
+  - type: "config"
+    strategy: "prefer_base"  # 配置项优先保留基准版本
+    description: "生产环境配置应保持稳定"
+  
+  - type: "business_logic"
+    strategy: "prefer_incoming"  # 业务逻辑优先保留新版本
+    description: "业务逻辑通常是同事的最新改动"
+  
+  - type: "comment"
+    strategy: "prefer_incoming"  # 注释优先保留新版本
+    description: "新注释通常更准确"
+
+# 忽略规则
+ignore:
+  - type: "whitespace"
+    enabled: false
+    description: "是否忽略空格差异"
+  
+  - type: "blank_lines"
+    enabled: false
+    description: "是否忽略空行差异"
+  
+  - type: "comments"
+    enabled: false
+    description: "是否忽略注释差异"
+
+# 高亮规则
+highlight:
+  - pattern: "TODO|FIXME|XXX"
+    color: "yellow"
+    description: "待办事项标记"
+  
+  - pattern: "password|secret|token|key"
+    color: "red"
+    description: "敏感信息警告"
+  
+  - pattern: "@Override|@Deprecated"
+    color: "blue"
+    description: "重要注解"
+
+# 合并建议
+suggestions:
+  - condition: "both_modified_same_line"
+    action: "manual_review"
+    message: "⚠️  双方都修改了同一行，需要人工审查"
+  
+  - condition: "config_file_changed"
+    action: "prefer_base"
+    message: "💡 建议保留基准版本的配置"
+  
+  - condition: "new_method_added"
+    action: "accept"
+    message: "✅ 新增方法，建议接受"
