@@ -209,3 +209,4 @@ __marimo__/
 
 #Ignore cursor AI rules
 .cursor\rules\codacy.mdc
+data/*
