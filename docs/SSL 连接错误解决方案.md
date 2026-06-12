@@ -120,7 +120,7 @@ HTTPS_PROXY=http://your-proxy:port
 ```bash
 # Gitee AI API 配置
 GITEE_AI_API_KEY=your_api_key_here
-GITEE_AI_BASE_URL=https://ai.gitee.com/v1
+GITEE_AI_BASE_URL=https://moark.com/v1
 GITEE_AI_MODEL=DeepSeek-V3
 
 # 请求配置

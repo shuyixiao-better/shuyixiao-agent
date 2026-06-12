@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     2. 选择你的运行配置
     3. 在 Environment variables 中添加以下变量：
        - GITEE_AI_API_KEY=你的API密钥
-       - GITEE_AI_BASE_URL=https://ai.gitee.com/v1
+       - GITEE_AI_BASE_URL=https://moark.com/v1
        - GITEE_AI_MODEL=DeepSeek-V3
        等等
     """
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
         description="Gitee AI API 密钥"
     )
     gitee_ai_base_url: str = Field(
-        default="https://ai.gitee.com/v1",
+        default="https://moark.com/v1",
         description="Gitee AI API 基础 URL"
     )
     

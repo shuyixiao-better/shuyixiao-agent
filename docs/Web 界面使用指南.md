@@ -31,7 +31,7 @@ pip install -e .
 
 ```bash
 GITEE_AI_API_KEY=你的API密钥
-GITEE_AI_BASE_URL=https://ai.gitee.com/v1
+GITEE_AI_BASE_URL=https://moark.com/v1
 GITEE_AI_MODEL=DeepSeek-V3
 ```
 

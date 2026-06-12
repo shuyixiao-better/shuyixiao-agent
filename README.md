@@ -7,7 +7,7 @@
 
 ## 📖 简介
 
-`shuyixiao-agent` 是一个基于 [LangGraph](https://github.com/langchain-ai/langgraph) 和 [码云 AI](https://ai.gitee.com/) 构建的现代化智能 Agent 框架。提供清晰的代码结构、完整的功能模块和详细的文档，适合学习和生产使用。
+`shuyixiao-agent` 是一个基于 [LangGraph](https://github.com/langchain-ai/langgraph) 和 [码云 AI](https://moark.com/) 构建的现代化智能 Agent 框架。提供清晰的代码结构、完整的功能模块和详细的文档，适合学习和生产使用。
 
 ### ✨ 核心特性
 
@@ -258,7 +258,7 @@ python examples/16_planning_agent_demo.py
 - 码云 AI API Key
 
 **获取 API Key**
-1. 访问 [码云 AI 平台](https://ai.gitee.com/)
+1. 访问 [码云 AI 平台](https://moark.com/)
 2. 注册/登录账号
 3. 前往 **工作台 -> 设置 -> 访问令牌** 创建令牌
 4. 购买模型资源包
@@ -617,7 +617,7 @@ USE_CLOUD_EMBEDDING=true
 
 - [LangGraph](https://github.com/langchain-ai/langgraph) - Agent 框架
 - [LangChain](https://github.com/langchain-ai/langchain) - LLM 工具库
-- [码云 AI](https://ai.gitee.com/) - 模型 API 服务
+- [码云 AI](https://moark.com/) - 模型 API 服务
 
 ## 📧 联系方式
 

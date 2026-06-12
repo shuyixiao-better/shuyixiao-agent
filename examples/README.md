@@ -352,7 +352,7 @@ python examples/12_routing_agent_demo.py
    - 在 `.env` 中填入你的码云 AI API Key
 
 3. **已购买资源包：**
-   - 访问 [码云 AI 模型广场](https://ai.gitee.com/serverless)
+   - 访问 [码云 AI 模型广场](https://moark.com/serverless)
    - 购买相应的模型资源包
 
 ## 运行示例

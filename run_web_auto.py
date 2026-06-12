@@ -85,7 +85,7 @@ def main():
             print("2. 编辑 .env 文件，添加：")
             print("   GITEE_AI_API_KEY=你的API密钥")
             print()
-            print("获取 API Key: https://ai.gitee.com/dashboard/settings/tokens")
+            print("获取 API Key: https://moark.com/dashboard/settings/tokens")
             print()
         else:
             print("✓ API Key 已配置")

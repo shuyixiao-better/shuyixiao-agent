@@ -34,7 +34,7 @@ client = GiteeAIClient(
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `api_key` | `str` | 从配置读取 | 码云 AI API Key |
-| `base_url` | `str` | `https://ai.gitee.com/api/serverless` | API 基础 URL |
+| `base_url` | `str` | `https://moark.com/api/serverless` | API 基础 URL |
 | `model` | `str` | `Qwen/Qwen2.5-7B-Instruct` | 使用的模型 |
 | `enable_failover` | `bool` | `True` | 是否启用故障转移 |
 
@@ -334,7 +334,7 @@ print(settings.gitee_ai_model)
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `gitee_ai_api_key` | `str` | `""` | API Key |
-| `gitee_ai_base_url` | `str` | `https://ai.gitee.com/api/serverless` | API 基础 URL |
+| `gitee_ai_base_url` | `str` | `https://moark.com/api/serverless` | API 基础 URL |
 | `gitee_ai_model` | `str` | `Qwen/Qwen2.5-7B-Instruct` | 默认模型 |
 | `agent_max_iterations` | `int` | `10` | Agent 最大迭代次数 |
 | `agent_verbose` | `bool` | `True` | 是否输出详细日志 |
