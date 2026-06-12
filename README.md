@@ -350,6 +350,119 @@ python examples/10_prompt_chaining_demo.py    # 完整功能（5个场景）
 python examples/11_prompt_chaining_simple.py  # 快速体验（3个示例）
 ```
 
+## 🐳 Docker 部署
+
+### 1. 准备环境变量
+
+```bash
+# 复制环境变量示例文件
+cp .env.example .env
+
+# 编辑 .env 文件，配置你的 API Key
+# GITEE_AI_API_KEY=your_api_key_here
+```
+
+**必须配置的环境变量：**
+- `GITEE_AI_API_KEY` - 码云 AI API 密钥（必填）
+
+**可选配置：**
+- `PORT` - Web 服务端口（默认 8000）
+- `GITEE_AI_MODEL` - 对话模型（默认 DeepSeek-V3）
+
+### 2. 构建镜像
+
+```bash
+# 使用 docker compose 构建
+docker compose build
+
+# 或使用 docker 命令
+docker build -t shuyixiao-agent .
+```
+
+### 3. 启动容器
+
+```bash
+# 使用 docker compose 启动（推荐）
+docker compose up -d
+
+# 或使用 docker 命令
+docker run -d \
+  --name shuyixiao-agent \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  shuyixiao-agent
+```
+
+### 4. 访问服务
+
+- **Web 界面**: http://localhost:8000
+- **API 文档**: http://localhost:8000/docs
+
+### 5. 常用命令
+
+```bash
+# 查看日志
+docker compose logs -f
+
+# 停止容器
+docker compose down
+
+# 重启容器
+docker compose restart
+
+# 查看容器状态
+docker compose ps
+
+# 进入容器
+docker compose exec shuyixiao-agent bash
+```
+
+### 6. 数据持久化
+
+`data/` 目录通过 volume 挂载到容器中，包含：
+- `data/chroma/` - 向量数据库
+- `data/memories/` - 记忆数据
+
+容器重启后数据不会丢失。
+
+### 7. 自定义端口
+
+```bash
+# 在 .env 文件中设置
+PORT=8080
+
+# 或启动时指定
+PORT=8080 docker compose up -d
+```
+
+### 8. 常见问题
+
+**Q: 端口被占用怎么办？**
+修改 `.env` 文件中的 `PORT` 配置，或停止占用端口的进程：
+```bash
+# 查看端口占用
+netstat -ano | findstr :8000
+# 或
+lsof -i :8000
+```
+
+**Q: API Key 未配置会怎样？**
+容器会启动，但对话功能无法使用。请确保 `.env` 文件中配置了正确的 `GITEE_AI_API_KEY`。
+
+**Q: 镜像构建很慢怎么办？**
+首次构建需要下载依赖，特别是 `torch` 和 `sentence-transformers` 较大。建议：
+- 使用国内镜像源
+- 确保网络稳定
+- 耐心等待（首次约 5-10 分钟）
+
+**Q: 如何更新到最新版本？**
+```bash
+git pull
+docker compose build
+docker compose up -d
+```
+
 ## 📂 项目结构
 
 ```

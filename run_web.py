@@ -27,10 +27,11 @@ def get_local_ip():
 
 if __name__ == "__main__":
     import uvicorn
-    
-    port = 8001
+    from shuyixiao_agent.config import settings
+
+    port = settings.port
     local_ip = get_local_ip()
-    
+
     print("=" * 60)
     print("🚀 启动 ShuYixiao Agent Web 界面")
     print("=" * 60)
@@ -49,12 +50,10 @@ if __name__ == "__main__":
     print("按 Ctrl+C 停止服务")
     print("=" * 60)
     print()
-    
+
     uvicorn.run(
         "shuyixiao_agent.web_app:app",
         host="0.0.0.0",
         port=port,
-        reload=True,
         log_level="info"
     )
-

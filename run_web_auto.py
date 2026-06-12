@@ -53,30 +53,11 @@ def main():
     print("🚀 启动 ShuYixiao Agent Web 界面（自动化版）")
     print("=" * 70)
     print()
-    
-    # 查找可用端口
-    print("🔍 查找可用端口...")
-    port = find_available_port(8000)
-    
-    if port is None:
-        print("❌ 无法找到可用端口 (8000-8009 都被占用)")
-        print()
-        print("请手动释放端口后再试：")
-        print("  netstat -ano | findstr :8000")
-        print("  taskkill /PID <PID> /F")
-        sys.exit(1)
-    
-    if port != 8000:
-        print(f"⚠️  端口 8000 被占用，使用端口 {port}")
-    else:
-        print(f"✓ 使用端口 {port}")
-    
-    print()
-    
+
     # 检查 API Key
     try:
         from shuyixiao_agent.config import settings
-        
+
         if not settings.gitee_ai_api_key:
             print("⚠️  警告: API Key 未配置")
             print()
@@ -85,15 +66,38 @@ def main():
             print("2. 编辑 .env 文件，添加：")
             print("   GITEE_AI_API_KEY=你的API密钥")
             print()
-            print("获取 API Key: https://moark.com/dashboard/settings/tokens")
+            print("获取 API Key: https://ai.gitee.com/dashboard/settings/tokens")
             print()
         else:
             print("✓ API Key 已配置")
             print(f"✓ 使用模型: {settings.gitee_ai_model}")
             print()
+
+        # 使用配置中的端口作为起始端口
+        start_port = settings.port
     except Exception as e:
         print(f"⚠️  配置加载失败: {e}")
         print()
+        start_port = 8000
+
+    # 查找可用端口
+    print("🔍 查找可用端口...")
+    port = find_available_port(start_port)
+
+    if port is None:
+        print(f"❌ 无法找到可用端口 ({start_port}-{start_port + 9} 都被占用)")
+        print()
+        print("请手动释放端口后再试：")
+        print(f"  netstat -ano | findstr :{start_port}")
+        print("  taskkill /PID <PID> /F")
+        sys.exit(1)
+
+    if port != start_port:
+        print(f"⚠️  端口 {start_port} 被占用，使用端口 {port}")
+    else:
+        print(f"✓ 使用端口 {port}")
+
+    print()
     
     local_ip = get_local_ip()
     

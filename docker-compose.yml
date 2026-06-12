@@ -1,0 +1,42 @@
+services:
+  shuyixiao-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shuyixiao-agent
+    ports:
+      - "${PORT:-8000}:${PORT:-8000}"
+    env_file:
+      - .env
+    environment:
+      # 覆盖 .env 中的某些配置（可选）
+      - PORT=${PORT:-8000}
+      - VECTOR_DB_PATH=/app/data/chroma
+    volumes:
+      # 持久化数据目录
+      - ./data:/app/data
+    restart: unless-stopped
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:${PORT:-8000}/api/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    # 资源限制（可选，根据需要调整）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '2'
+    #       memory: 4G
+    #     reservations:
+    #       cpus: '1'
+    #       memory: 2G
+    # 网络配置（可选）
+    # networks:
+    #   - shuyixiao-network
+
+# 自定义网络（可选）
+# networks:
+#   shuyixiao-network:
+#     driver: bridge

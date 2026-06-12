@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+.cursor
+*.swp
+*.swo
+
+# Python
+.venv
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info
+dist
+build
+.eggs
+
+# 环境文件
+.env
+.env.*
+!.env.example
+
+# 日志
+*.log
+logs
+
+# 测试和文档
+tests
+examples
+docs
+images
+
+# 数据目录（通过 volume 挂载，不打包到镜像）
+data
+
+# 临时文件
+*.tmp
+*.bak
+*.cache
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# 其他项目文件
+code_merge_assistant
+prompt_chain_story_*.md
+knowledge_base_mappings.json
+Dockerfile
+docker-compose.yml
+.dockerignore
+README.md
+LICENSE

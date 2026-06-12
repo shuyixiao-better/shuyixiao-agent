@@ -91,7 +91,13 @@ class Settings(BaseSettings):
         default=False,
         description="是否验证 SSL 证书（如遇到 SSL 错误可设为 False）"
     )
-    
+
+    # 服务器配置
+    port: int = Field(
+        default=8000,
+        description="Web 服务端口"
+    )
+
     # RAG 嵌入模型配置
     use_cloud_embedding: bool = Field(
         default=True,
