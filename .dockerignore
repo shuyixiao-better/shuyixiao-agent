@@ -53,5 +53,4 @@ knowledge_base_mappings.json
 Dockerfile
 docker-compose.yml
 .dockerignore
-README.md
 LICENSE
