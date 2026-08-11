@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     
     # SSL 配置
     ssl_verify: bool = Field(
-        default=False,
+        default=True,
         description="是否验证 SSL 证书（如遇到 SSL 错误可设为 False）"
     )
 

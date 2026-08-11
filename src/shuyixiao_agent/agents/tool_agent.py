@@ -12,6 +12,7 @@ import json
 
 from ..gitee_ai_client import GiteeAIClient
 from ..config import settings
+from ..providers import LLMProvider
 
 
 class ToolAgentState(TypedDict):
@@ -34,7 +35,8 @@ class ToolAgent:
         model: str = None,
         tools: List[Dict[str, Any]] = None,
         system_message: str = "你是一个有帮助的AI助手。你可以使用提供的工具来完成任务。",
-        max_iterations: int = 10
+        max_iterations: int = 10,
+        llm_client: LLMProvider | None = None,
     ):
         """
         初始化 Tool Agent
@@ -45,12 +47,13 @@ class ToolAgent:
             tools: 工具列表
             system_message: 系统提示词
             max_iterations: 最大迭代次数
+            llm_client: 可选的兼容 LLM Provider；传入后不会创建默认客户端
         """
         # 如果配置了专用的 Agent 模型，使用该模型
         if model is None:
             model = settings.agent_model or settings.gitee_ai_model
         
-        self.client = GiteeAIClient(api_key=api_key, model=model)
+        self.client = llm_client or GiteeAIClient(api_key=api_key, model=model)
         self.system_message = system_message
         self.max_iterations = max_iterations
         self.tools = tools or []

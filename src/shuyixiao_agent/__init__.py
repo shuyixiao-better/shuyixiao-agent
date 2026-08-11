@@ -8,6 +8,7 @@ __author__ = "ShuYixiao"
 from .gitee_ai_client import GiteeAIClient
 from .agents.simple_agent import SimpleAgent
 from .config import settings
+from .providers import LLMProvider
 
 # RAG Agent 使用延迟导入，避免阻塞启动
 # from .rag.rag_agent import RAGAgent
@@ -17,6 +18,7 @@ __all__ = [
     "SimpleAgent",
     # "RAGAgent",  # 延迟导入
     "settings",
+    "LLMProvider",
 ]
 
 

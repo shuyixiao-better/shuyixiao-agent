@@ -4,13 +4,14 @@
 使用 LangGraph 实现一个基础的对话 Agent
 """
 
-from typing import TypedDict, Annotated, Sequence
+from typing import Annotated, Sequence, TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 import operator
 
 from ..gitee_ai_client import GiteeAIClient
 from ..config import settings
+from ..providers import LLMProvider
 
 
 class AgentState(TypedDict):
@@ -31,7 +32,8 @@ class SimpleAgent:
         self, 
         api_key: str = None,
         model: str = None,
-        system_message: str = "你是一个有帮助的AI助手，请友好、专业地回答用户的问题。"
+        system_message: str = "你是一个有帮助的AI助手，请友好、专业地回答用户的问题。",
+        llm_client: LLMProvider | None = None,
     ):
         """
         初始化 Simple Agent
@@ -40,12 +42,13 @@ class SimpleAgent:
             api_key: 码云 AI API Key
             model: 使用的模型名称（留空则使用配置的 AGENT_MODEL 或默认模型）
             system_message: 系统提示词
+            llm_client: 可选的兼容 LLM Provider；传入后不会创建默认客户端
         """
         # 如果配置了专用的 Agent 模型，使用该模型
         if model is None:
             model = settings.agent_model or settings.gitee_ai_model
         
-        self.client = GiteeAIClient(api_key=api_key, model=model)
+        self.client = llm_client or GiteeAIClient(api_key=api_key, model=model)
         self.system_message = system_message
         self.graph = self._build_graph()
     

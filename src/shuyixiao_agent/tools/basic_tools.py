@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+import ast
 import operator
 import random
 import uuid
@@ -32,18 +33,33 @@ def calculate(expression: str) -> float:
     Returns:
         计算结果
     """
-    # 安全的数学表达式求值
-    # 只允许数字和基本运算符
-    allowed_chars = set("0123456789+-*/(). ")
-    
-    if not all(c in allowed_chars for c in expression):
-        raise ValueError("表达式包含不允许的字符")
-    
+    if len(expression) > 200:
+        raise ValueError("表达式过长")
+
+    binary_operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+    }
+    unary_operators = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+    def evaluate(node):
+        if isinstance(node, ast.Expression):
+            return evaluate(node.body)
+        if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+            return node.value
+        if isinstance(node, ast.BinOp) and type(node.op) in binary_operators:
+            return binary_operators[type(node.op)](evaluate(node.left), evaluate(node.right))
+        if isinstance(node, ast.UnaryOp) and type(node.op) in unary_operators:
+            return unary_operators[type(node.op)](evaluate(node.operand))
+        raise ValueError("表达式只允许数字、括号和加减乘除")
+
     try:
-        result = eval(expression, {"__builtins__": {}}, {})
+        result = evaluate(ast.parse(expression, mode="eval"))
         return float(result)
-    except Exception as e:
-        raise ValueError(f"计算错误: {str(e)}")
+    except (SyntaxError, TypeError, ZeroDivisionError, OverflowError) as exc:
+        raise ValueError(f"计算错误: {exc}") from exc
 
 
 def search_wikipedia(query: str) -> str:
