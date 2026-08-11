@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    env:
+      GITEE_AI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install project and development tools
+        run: python -m pip install -e ".[dev]"
+      - name: Lint correctness
+        run: python -m ruff check .
+      - name: Test and run offline evaluations
+        run: python -m pytest
+      - name: Validate imports and bytecode
+        run: |
+          python -m compileall -q src examples evals
+          python -c "import shuyixiao_agent; print(shuyixiao_agent.__version__)"
+      - name: Build distributions
+        run: python -m build
+      - name: Smoke-test offline example
+        run: python examples/00_offline_quickstart.py
