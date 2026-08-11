@@ -1,7 +1,7 @@
 [project]
 name = "shuyixiao-agent"
 version = "0.1.0"
-description = "基于 LangGraph 和码云 AI 的智能 Agent 项目"
+description = "Runnable reference implementations of modern AI agent patterns"
 authors = [
     {name = "ShuYixiao",email = "chinasjh2022@126.com"}
 ]
@@ -33,10 +33,27 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
-    "black>=24.0.0",
+    "build>=1.2.0",
     "ruff>=0.8.0",
-    "mypy>=1.14.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/shuyixiao-better/shuyixiao-agent"
+Documentation = "https://github.com/shuyixiao-better/shuyixiao-agent/tree/main/docs"
+Issues = "https://github.com/shuyixiao-better/shuyixiao-agent/issues"
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests", "evals"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+# Start with correctness checks that the legacy codebase can enforce reliably.
+# Formatting and broader modernization rules are tracked in ROADMAP.md.
+select = ["E9", "F63", "F7", "F82"]
 
 
 [build-system]
